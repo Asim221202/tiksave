@@ -22,38 +22,45 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const CALLBACK_URL = process.env.DISCORD_CALLBACK_URL;
 
-// Proxy listesi (sırasıyla veya rastgele seçilecek)
+// Proxy listesi
 const PROXIES = [
   process.env.PROXY1_URL,
-  process.env.PROXY2_URL
+  process.env.PROXY2_URL,
+  process.env.PROXY3_URL,
+  
 ];
 
-// Helper: shortId üret
-function generateShortId() {
-  return nanoid();
+// Rastgele proxy seç
+function getRandomProxy() {
+  const index = Math.floor(Math.random() * PROXIES.length);
+  return PROXIES[index];
 }
 
-// TikWM Proxy üzerinden video al (retry + fallback)
+// Proxy üzerinden video çek (random + fallback)
 async function fetchVideoFromProxy(url) {
-  for (const proxyUrl of PROXIES) {
-    for (let attempt = 0; attempt < 2; attempt++) { // 2 deneme
-      try {
-        const res = await axios.post(proxyUrl, { url }, { timeout: 10000 });
-        if (res.data && res.data.code === 0 && res.data.data) {
-          return res.data.data;
-        } else if (res.data?.msg?.toLowerCase().includes('limit')) {
-          console.warn(`Proxy limit: ${proxyUrl} - ${res.data.msg}`);
-          break; // diğer proxyye geç
-        } else {
-          console.warn(`Proxy başarısız: ${proxyUrl} - ${res.data?.msg || 'Unknown error'}`);
-        }
-      } catch (err) {
-        console.warn(`Proxy hatası: ${proxyUrl} - ${err.message}`);
-        await new Promise(r => setTimeout(r, 1000)); // 1 saniye bekle
+  const tried = new Set();
+
+  for (let i = 0; i < PROXIES.length; i++) {
+    const proxy = getRandomProxy();
+    if (tried.has(proxy)) continue; // aynı proxyyi tekrar deneme
+    tried.add(proxy);
+
+    try {
+      console.log(`🎯 Proxy deneniyor: ${proxy}`);
+      const response = await axios.post(proxy, { url }, { timeout: 10000 });
+
+      if (response.data && response.data.code === 0 && response.data.data) {
+        console.log(`✅ Proxy başarılı: ${proxy}`);
+        return response.data.data;
+      } else {
+        console.warn(`⚠️ Proxy başarısız: ${proxy} - ${response.data?.msg || 'Unknown error'}`);
       }
+    } catch (error) {
+      console.error(`❌ Proxy hatası: ${proxy} - ${error.message}`);
     }
   }
-  throw new Error('Tüm proxyler başarısız oldu veya limit aşıldı');
+
+  throw new Error("Tüm proxyler başarısız oldu veya limit aşıldı");
 }
 
 // EJS ve static
@@ -130,7 +137,7 @@ app.post('/api/tiktok-process', async (req, res) => {
     // ShortId üret ve kaydet
     let shortId, exists;
     do {
-      shortId = generateShortId();
+      shortId = nanoid();
       exists = await VideoLink.findOne({ shortId });
     } while (exists);
 
@@ -158,7 +165,6 @@ app.get('/api/info/:shortId', async (req, res) => {
   }
 });
 
-// Proxy download
 // Proxy download
 app.get('/proxy-download', async (req, res) => {
   const { url, username, type, shortId } = req.query;
