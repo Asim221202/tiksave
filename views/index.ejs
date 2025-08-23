@@ -911,7 +911,7 @@
             fetchBtn.disabled = true;
 
             try {
-                const res = await fetch('/get-links', {
+                const res = await fetch('/api/tiktok-process', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({url})
