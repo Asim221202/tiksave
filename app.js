@@ -211,33 +211,51 @@ app.get('/proxy-download', async (req, res) => {
 });
 
 // ShortId ile redirect
+// ShortId ile redirect
 app.get('/:shortId', async (req, res) => {
-  const videoLink = await VideoLink.findOne({ shortId: req.params.shortId });
-  if (!videoLink) return res.status(404).send('Video bulunamadı');
+  try {
+    const videoLink = await VideoLink.findOne({ shortId: req.params.shortId });
+    if (!videoLink) return res.status(404).send('Video bulunamadı');
 
-  let videoData = videoLink.videoInfo;
-  if (!videoData) {
+    let videoData;
+
+    // ✅ Her zaman proxy API’den yeniden çek
     try {
-      const response = await axios.post('https://www.tikwm.com/api/', { url: videoLink.originalUrl });
-      const data = response.data;
-      if (!data || data.code !== 0) return res.status(404).send('Video bilgisi alınamadı');
-      videoData = data.data;
-      videoLink.videoInfo = videoData;
+      const freshData = await fetchVideoFromProxy(videoLink.originalUrl);
+      videoData = freshData;
+
+      // DB’deki videoInfo’yu güncelle
+      videoLink.videoInfo = freshData;
       await videoLink.save();
+      console.log(`♻️ Video bilgisi güncellendi: ${videoLink.shortId}`);
     } catch (err) {
-      console.error(err);
-      return res.status(500).send('Sunucu hatası');
+      console.error('Yeniden fetch hatası:', err.message);
+      // proxy hata verirse fallback olarak DB'deki eski veriyi kullan
+      videoData = videoLink.videoInfo;
     }
-  }
 
-  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-  const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
-  const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
-  if (isDiscordOrTelegram || acceptsVideo) {
-    if (videoData.hdplay || videoData.play) return res.redirect(307, videoData.hdplay || videoData.play);
-  }
+    if (!videoData) {
+      return res.status(404).send('Video bilgisi alınamadı');
+    }
 
-  res.render('index', { videoData });
+    // Discord / Telegram embed kontrolü
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
+    const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
+
+    if (isDiscordOrTelegram || acceptsVideo) {
+      if (videoData.hdplay || videoData.play) {
+        return res.redirect(307, videoData.hdplay || videoData.play);
+      }
+    }
+
+    // Web render
+    res.render('index', { videoData });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Sunucu hatası');
+  }
 });
 
 app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
