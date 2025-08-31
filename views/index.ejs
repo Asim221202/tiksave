@@ -895,98 +895,111 @@
             }
         });
 
-        mainForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (isFetching) return;
+       mainForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isFetching) return;
 
-            const url = videoUrlInput.value.trim();
-            if (!url) {
-                alert("Please enter a valid TikTok URL.");
-                return;
-            }
+    const url = videoUrlInput.value.trim();
+    if (!url) {
+        showMessage("Please enter a valid video URL.");
+        return;
+    }
 
-            isFetching = true;
-            const fetchBtn = document.querySelector('.fetch-btn');
-            fetchBtn.textContent = 'Fetching...';
-            fetchBtn.disabled = true;
+    isFetching = true;
+    const fetchBtn = document.querySelector('.fetch-btn');
+    fetchBtn.textContent = 'Fetching...';
+    fetchBtn.disabled = true;
 
-            try {
-                const res = await fetch('/api/tiktok-process', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url})
-                });
+    let apiEndpoint = '';
+    // Check which platform the entered URL belongs to.
+    if (url.includes('tiktok.com')) {
+        apiEndpoint = '/api/tiktok-process';
+    } else if (url.includes('instagram.com')) {
+        apiEndpoint = '/api/get-media';
+    } else {
+        showMessage("Invalid URL. Please enter a TikTok or Instagram link.");
+        isFetching = false;
+        fetchBtn.textContent = 'Download';
+        fetchBtn.disabled = false;
+        return;
+    }
 
-                const data = await res.json();
-
-                if (!data.success) {
-                    alert(data.message || "Failed to fetch download links. Please ensure the link is correct.");
-                    previewContainer.style.display = 'none';
-                    optionsContainer.style.display = 'none';
-                    return;
-                }
-
-                // Show preview container
-                previewContainer.style.display = 'flex';
-                setTimeout(() => previewContainer.classList.add('show'), 10);
-                
-                // Set preview data
-                if(data.cover) {
-                    previewThumbnail.src = data.cover;
-                } else {
-                    previewThumbnail.src = '';
-                }
-                
-                if (data.title) {
-                    previewTitle.textContent = data.title;
-                } else {
-                    previewTitle.textContent = 'No Title Found';
-                }
-
-                // Inject video player dynamically if a video link exists
-                const videoPlayer = previewContainer.querySelector('video');
-                if (videoPlayer) {
-                    videoPlayer.remove();
-                }
-
-                if (data.hdplay || data.play) {
-                    const videoElement = document.createElement('video');
-                    videoElement.setAttribute('controls', '');
-                    videoElement.setAttribute('preload', 'metadata');
-                    videoElement.setAttribute('poster', data.cover || '');
-                    videoElement.style.cssText = 'width: 100%; max-width: 600px; border-radius: 16px; margin-top: 15px;';
-                    const sourceElement = document.createElement('source');
-                    sourceElement.src = data.hdplay || data.play;
-                    sourceElement.type = 'video/mp4';
-                    videoElement.appendChild(sourceElement);
-                    previewContainer.appendChild(videoElement);
-                }
-
-                // Clear old options and inject new ones dynamically
-                optionsContainer.innerHTML = '';
-                if (data.music) {
-                    optionsContainer.innerHTML += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(data.music)}&username=${encodeURIComponent(data.username)}&type=music">🎵 MP3 (Audio Only)</a>`;
-                }
-                if (data.play) {
-                    optionsContainer.innerHTML += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(data.play)}&username=${encodeURIComponent(data.username)}&type=play">📽️ SD Video (Normal Quality)</a>`;
-                }
-                if (data.hdplay) {
-                    optionsContainer.innerHTML += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(data.hdplay)}&username=${encodeURIComponent(data.username)}&type=hdplay">📽️ HD Video (High Quality)</a>`;
-                }
-                optionsContainer.style.display = 'flex';
-
-            } catch (err) {
-                alert("Error fetching download links.");
-                console.error(err);
-                previewContainer.style.display = 'none';
-                optionsContainer.style.display = 'none';
-            } finally {
-                isFetching = false;
-                fetchBtn.textContent = 'Download';
-                fetchBtn.disabled = false;
-            }
+    try {
+        const res = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
         });
-        
+
+        const data = await res.json();
+
+        if (!data.success) {
+            showMessage(data.message || "Failed to fetch download links. Please make sure the link is correct.");
+            previewContainer.classList.remove('show');
+            return;
+        }
+
+        previewContainer.classList.add('show');
+        previewTitle.textContent = data.desc || data.media_info?.caption || 'Untitled Video';
+        videoPlayerContainer.innerHTML = '';
+        optionsContainer.innerHTML = '';
+
+        let downloadButtonsHtml = '';
+
+        // Process TikTok video
+        if (data.hdplay || data.play) {
+            const videoElement = document.createElement('video');
+            videoElement.setAttribute('controls', '');
+            videoElement.setAttribute('preload', 'metadata');
+            videoElement.setAttribute('poster', data.cover || '');
+            videoElement.className = 'w-full max-w-xl rounded-2xl';
+            videoElement.innerHTML = `<source src="${data.hdplay || data.play}" type="video/mp4">`;
+            videoPlayerContainer.appendChild(videoElement);
+            if (data.hdplay) {
+                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=hdplay">📽️ HD Video</a>`;
+            }
+            if (data.play) {
+                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=play">📽️ SD Video</a>`;
+            }
+            if (data.music) {
+                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=music">🎵 MP3 (Audio)</a>`;
+            }
+        }
+        // Process Instagram video/image
+        else if (data.media_url) {
+            const mediaUrl = data.media_url;
+            const mediaType = data.is_video ? 'video' : 'image';
+            const mediaElement = document.createElement(mediaType);
+            mediaElement.setAttribute('controls', data.is_video ? '' : null);
+            mediaElement.setAttribute('poster', data.thumbnail_url || '');
+            mediaElement.className = 'w-full max-w-xl rounded-2xl';
+            if (data.is_video) {
+                mediaElement.innerHTML = `<source src="${mediaUrl}" type="video/mp4">`;
+            } else {
+                mediaElement.src = mediaUrl;
+            }
+            videoPlayerContainer.appendChild(mediaElement);
+
+            downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(mediaUrl)}&username=${encodeURIComponent(data.username)}&type=${mediaType}">Download ${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}</a>`;
+
+        } else {
+            showMessage("No video or image found for this URL.");
+            previewContainer.classList.remove('show');
+        }
+
+        optionsContainer.innerHTML = downloadButtonsHtml;
+
+    } catch (err) {
+        showMessage("An error occurred while fetching download links.");
+        console.error(err);
+        previewContainer.classList.remove('show');
+    } finally {
+        isFetching = false;
+        fetchBtn.textContent = 'Download';
+        fetchBtn.disabled = false;
+    }
+});
+
         // Accordion functionality
         accordionHeaders.forEach(header => {
             header.addEventListener('click', () => {
