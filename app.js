@@ -206,12 +206,14 @@ app.get('/api/info/:shortId', async (req, res) => {
 
 // Proxy download
 app.get('/proxy-download', async (req, res) => {
-    const { shortId, type, username } = req.query;
+    const { shortId, type, username, mediaIndex = 0 } = req.query;
     try {
         const videoLink = await VideoLink.findOne({ shortId });
         if (!videoLink || !videoLink.videoInfo) return res.status(404).send('Video bulunamadı');
 
-        let videoUrl = videoLink.videoInfo.media_url || videoLink.videoInfo.play || videoLink.videoInfo.hdplay;
+        const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
+        
+        let videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
         if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
         const extension = (type === 'music') ? 'mp3' : videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg';
@@ -237,36 +239,31 @@ app.get('/:shortId', async (req, res) => {
         let videoData = videoLink.videoInfo;
 
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
+        const hasMultipleMedia = Array.isArray(videoLink.videoInfo.media) && videoLink.videoInfo.media.length > 1;
 
         try {
-            // Instagram linki ise her zaman taze URL çek
             if (isInstagram) {
                 const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
-                videoData = freshMediaInfo.media && freshMediaInfo.media.length > 0 ? freshMediaInfo.media[0] : null;
-                // Veritabanındaki kaydı güncel taze veriyle güncelle
+                videoData = freshMediaInfo;
                 videoLink.videoInfo = freshMediaInfo;
                 await videoLink.save();
             } else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com')) {
-                // TikTok linki ise, her seferinde tekrar proxy üzerinden çek
                 videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
-                // Veritabanındaki kaydı güncel veriyle güncelle
                 videoLink.videoInfo = videoData;
                 await videoLink.save();
             }
-
         } catch (err) {
             console.error('Yeniden fetch hatası:', err.message);
-            // Hata olsa bile eski verilerle devam et
         }
 
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
         const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
 
-        if (isDiscordOrTelegram || acceptsVideo) {
-            // Instagram için video URL'yi doğru yerden al
+        // Eğer galeri gönderisi ise, Discord ve Telegram'ı direkt olarak indirmeye yönlendirme
+        if ((isDiscordOrTelegram || acceptsVideo) && !hasMultipleMedia) {
             const redirectUrl = isInstagram 
-                ? videoData.media_url 
+                ? (Array.isArray(videoData.media) ? videoData.media[0]?.media_url : videoData.media_url)
                 : videoLink.videoInfo.hdplay || videoLink.videoInfo.play || videoLink.videoInfo.media_url;
                 
             if (redirectUrl) return res.redirect(307, redirectUrl);
