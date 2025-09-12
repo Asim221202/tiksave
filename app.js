@@ -213,10 +213,20 @@ app.get('/proxy-download', async (req, res) => {
 
         const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
         
-        let videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
+        let videoUrl;
+        if (type === 'video') {
+            videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
+            if (!videoUrl || !videoUrl.endsWith('.mp4')) {
+                // If the primary URL isn't a video, check for an explicit video URL
+                videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
+            }
+        } else {
+            videoUrl = mediaInfo.media_url || mediaInfo.cover;
+        }
+
         if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
-        const extension = (type === 'music') ? 'mp3' : (videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg');
+        const extension = type === 'video' ? 'mp4' : 'jpg';
         const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
@@ -254,18 +264,6 @@ app.get('/:shortId', async (req, res) => {
             }
         } catch (err) {
             console.error('Yeniden fetch hatası:', err.message);
-        }
-
-        const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-        const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
-        const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
-
-        if ((isDiscordOrTelegram || acceptsVideo) && !hasMultipleMedia) {
-            const media = videoLink.videoInfo.media ? videoLink.videoInfo.media[0] : videoLink.videoInfo;
-            const redirectUrl = isInstagram 
-                ? media.media_url
-                : (media.hdplay || media.play);
-            if (redirectUrl) return res.redirect(307, redirectUrl);
         }
 
         res.render('index', { videoData: videoLink.videoInfo });
