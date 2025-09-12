@@ -206,27 +206,15 @@ app.get('/api/info/:shortId', async (req, res) => {
 
 // Proxy download
 app.get('/proxy-download', async (req, res) => {
-    const { shortId, type, username, mediaIndex = 0 } = req.query;
+    const { shortId, type, username } = req.query;
     try {
         const videoLink = await VideoLink.findOne({ shortId });
         if (!videoLink || !videoLink.videoInfo) return res.status(404).send('Video bulunamadı');
 
-        const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
-        
-        let videoUrl;
-        if (type === 'video') {
-            videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
-            if (!videoUrl || !videoUrl.endsWith('.mp4')) {
-                // Eğer ana URL bir video değilse, açık bir video URL'si olup olmadığını kontrol et
-                videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
-            }
-        } else {
-            videoUrl = mediaInfo.media_url || mediaInfo.cover;
-        }
-
+        let videoUrl = videoLink.videoInfo.media_url || videoLink.videoInfo.play || videoLink.videoInfo.hdplay;
         if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
-        const extension = type === 'video' ? 'mp4' : 'jpg';
+        const extension = (type === 'music') ? 'mp3' : videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg';
         const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
@@ -249,27 +237,41 @@ app.get('/:shortId', async (req, res) => {
         let videoData = videoLink.videoInfo;
 
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
-        const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
-        const isTikTok = !isInstagram && !isTwitter;
 
         try {
-            // TikTok videoları için her istekte yeniden veri al
+            // Instagram linki ise her zaman taze URL çek
             if (isInstagram) {
                 const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
-                videoData = freshMediaInfo;
+                videoData = freshMediaInfo.media && freshMediaInfo.media.length > 0 ? freshMediaInfo.media[0] : null;
+                // Veritabanındaki kaydı güncel taze veriyle güncelle
                 videoLink.videoInfo = freshMediaInfo;
                 await videoLink.save();
-            } else if (isTikTok) {
+            } else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com')) {
+                // TikTok linki ise, her seferinde tekrar proxy üzerinden çek
                 videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+                // Veritabanındaki kaydı güncel veriyle güncelle
                 videoLink.videoInfo = videoData;
                 await videoLink.save();
             }
+
         } catch (err) {
             console.error('Yeniden fetch hatası:', err.message);
+            // Hata olsa bile eski verilerle devam et
         }
 
-        // Web tarayıcısı veya botlar için render
-        // EJS dosyası, Discord embedleri için gerekli meta etiketleri içermeli
+        const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+        const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
+        const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
+
+        if (isDiscordOrTelegram || acceptsVideo) {
+            // Instagram için video URL'yi doğru yerden al
+            const redirectUrl = isInstagram 
+                ? videoData.media_url 
+                : videoLink.videoInfo.hdplay || videoLink.videoInfo.play || videoLink.videoInfo.media_url;
+                
+            if (redirectUrl) return res.redirect(307, redirectUrl);
+        }
+
         res.render('index', { videoData: videoLink.videoInfo });
 
     } catch (err) {
