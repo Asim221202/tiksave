@@ -216,7 +216,7 @@ app.get('/proxy-download', async (req, res) => {
         let videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
         if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
-        const extension = (type === 'music') ? 'mp3' : videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg';
+        const extension = (type === 'music') ? 'mp3' : (videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg');
         const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
@@ -260,12 +260,11 @@ app.get('/:shortId', async (req, res) => {
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
         const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
 
-        // Eğer galeri gönderisi ise, Discord ve Telegram'ı direkt olarak indirmeye yönlendirme
         if ((isDiscordOrTelegram || acceptsVideo) && !hasMultipleMedia) {
+            const media = videoLink.videoInfo.media ? videoLink.videoInfo.media[0] : videoLink.videoInfo;
             const redirectUrl = isInstagram 
-                ? (Array.isArray(videoData.media) ? videoData.media[0]?.media_url : videoData.media_url)
-                : videoLink.videoInfo.hdplay || videoLink.videoInfo.play || videoLink.videoInfo.media_url;
-                
+                ? media.media_url
+                : (media.hdplay || media.play);
             if (redirectUrl) return res.redirect(307, redirectUrl);
         }
 
