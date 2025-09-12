@@ -249,23 +249,23 @@ app.get('/:shortId', async (req, res) => {
         let videoData = videoLink.videoInfo;
 
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
-        const hasMultipleMedia = Array.isArray(videoLink.videoInfo.media) && videoLink.videoInfo.media.length > 1;
+        const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
+        const isTikTok = !isInstagram && !isTwitter;
 
-        try {
-            if (isInstagram) {
-                const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
-                videoData = freshMediaInfo;
-                videoLink.videoInfo = freshMediaInfo;
-                await videoLink.save();
-            } else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com')) {
-                videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
-                videoLink.videoInfo = videoData;
-                await videoLink.save();
-            }
-        } catch (err) {
-            console.error('Yeniden fetch hatası:', err.message);
+        // Discord veya Telegram botu için yönlendirme
+        const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+        const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
+
+        // TikTok ve tekli Instagram gönderileri için direct yönlendirme
+        if (isDiscordOrTelegram && isTikTok) {
+            const redirectUrl = videoLink.videoInfo.hdplay || videoLink.videoInfo.play;
+            if (redirectUrl) return res.redirect(307, redirectUrl);
+        } else if (isDiscordOrTelegram && isInstagram && videoLink.videoInfo.media.length === 1) {
+            const redirectUrl = videoLink.videoInfo.media[0].media_url;
+            if (redirectUrl) return res.redirect(307, redirectUrl);
         }
 
+        // Web tarayıcısı için
         res.render('index', { videoData: videoLink.videoInfo });
 
     } catch (err) {
