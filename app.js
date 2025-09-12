@@ -95,7 +95,7 @@ app.use(passport.session());
 
 passport.use(new DiscordStrategy({
     clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
+    clientSecret: CLIENT_ENV_SECRET,
     callbackURL: CALLBACK_URL,
     scope: ['identify', 'guilds']
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
@@ -206,15 +206,26 @@ app.get('/api/info/:shortId', async (req, res) => {
 
 // Proxy download
 app.get('/proxy-download', async (req, res) => {
-    const { shortId, type, username } = req.query;
+    const { shortId, type, username, mediaIndex = 0 } = req.query;
     try {
         const videoLink = await VideoLink.findOne({ shortId });
         if (!videoLink || !videoLink.videoInfo) return res.status(404).send('Video bulunamadı');
 
-        let videoUrl = videoLink.videoInfo.media_url || videoLink.videoInfo.play || videoLink.videoInfo.hdplay;
+        const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
+        
+        let videoUrl;
+        if (type === 'video') {
+            videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
+            if (!videoUrl || !videoUrl.endsWith('.mp4')) {
+                videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
+            }
+        } else {
+            videoUrl = mediaInfo.media_url || mediaInfo.cover;
+        }
+
         if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
-        const extension = (type === 'music') ? 'mp3' : videoUrl.endsWith('.mp4') ? 'mp4' : 'jpg';
+        const extension = type === 'video' ? 'mp4' : 'jpg';
         const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
@@ -235,44 +246,45 @@ app.get('/:shortId', async (req, res) => {
         if (!videoLink) return res.status(404).send('Video bulunamadı');
 
         let videoData = videoLink.videoInfo;
-
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
-
+        const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
+        const isTikTok = !isInstagram && !isTwitter;
+        
+        // Veritabanı verisini her seferinde güncelleyecek mantık
         try {
-            // Instagram linki ise her zaman taze URL çek
             if (isInstagram) {
                 const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
-                videoData = freshMediaInfo.media && freshMediaInfo.media.length > 0 ? freshMediaInfo.media[0] : null;
-                // Veritabanındaki kaydı güncel taze veriyle güncelle
+                videoData = freshMediaInfo;
                 videoLink.videoInfo = freshMediaInfo;
-                await videoLink.save();
-            } else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com')) {
-                // TikTok linki ise, her seferinde tekrar proxy üzerinden çek
-                videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
-                // Veritabanındaki kaydı güncel veriyle güncelle
-                videoLink.videoInfo = videoData;
-                await videoLink.save();
+            } else if (isTikTok) {
+                const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+                videoData = freshVideoInfo;
+                videoLink.videoInfo = freshVideoInfo;
             }
-
+            await videoLink.save();
         } catch (err) {
-            console.error('Yeniden fetch hatası:', err.message);
-            // Hata olsa bile eski verilerle devam et
+            console.error('Veri güncelleme hatası:', err.message);
         }
 
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
-        const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
 
-        if (isDiscordOrTelegram || acceptsVideo) {
-            // Instagram için video URL'yi doğru yerden al
-            const redirectUrl = isInstagram 
-                ? videoData.media_url 
-                : videoLink.videoInfo.hdplay || videoLink.videoInfo.play || videoLink.videoInfo.media_url;
-                
-            if (redirectUrl) return res.redirect(307, redirectUrl);
+        // Tekli video/görsel içerikler için botu doğrudan yönlendir
+        if (isDiscordOrTelegram) {
+            let mediaUrl = null;
+            if (isTikTok && videoData.play) {
+                mediaUrl = videoData.play;
+            } else if (isInstagram && videoData.media && videoData.media.length === 1) {
+                mediaUrl = videoData.media[0].media_url;
+            }
+
+            if (mediaUrl) {
+                return res.redirect(307, mediaUrl);
+            }
         }
-
-        res.render('index', { videoData: videoLink.videoInfo });
+        
+        // Çoklu medya veya web tarayıcıları için EJS sayfasını render et
+        res.render('index', { videoData: videoData, isInstagram, isTwitter, isTikTok });
 
     } catch (err) {
         res.status(500).send('Sunucu hatası');
