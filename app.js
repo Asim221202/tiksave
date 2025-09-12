@@ -217,7 +217,7 @@ app.get('/proxy-download', async (req, res) => {
         if (type === 'video') {
             videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
             if (!videoUrl || !videoUrl.endsWith('.mp4')) {
-                // If the primary URL isn't a video, check for an explicit video URL
+                // Eğer ana URL bir video değilse, açık bir video URL'si olup olmadığını kontrol et
                 videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
             }
         } else {
@@ -252,20 +252,24 @@ app.get('/:shortId', async (req, res) => {
         const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
         const isTikTok = !isInstagram && !isTwitter;
 
-        // Discord veya Telegram botu için yönlendirme
-        const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-        const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
-
-        // TikTok ve tekli Instagram gönderileri için direct yönlendirme
-        if (isDiscordOrTelegram && isTikTok) {
-            const redirectUrl = videoLink.videoInfo.hdplay || videoLink.videoInfo.play;
-            if (redirectUrl) return res.redirect(307, redirectUrl);
-        } else if (isDiscordOrTelegram && isInstagram && videoLink.videoInfo.media.length === 1) {
-            const redirectUrl = videoLink.videoInfo.media[0].media_url;
-            if (redirectUrl) return res.redirect(307, redirectUrl);
+        try {
+            // TikTok videoları için her istekte yeniden veri al
+            if (isInstagram) {
+                const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
+                videoData = freshMediaInfo;
+                videoLink.videoInfo = freshMediaInfo;
+                await videoLink.save();
+            } else if (isTikTok) {
+                videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+                videoLink.videoInfo = videoData;
+                await videoLink.save();
+            }
+        } catch (err) {
+            console.error('Yeniden fetch hatası:', err.message);
         }
 
-        // Web tarayıcısı için
+        // Web tarayıcısı veya botlar için render
+        // EJS dosyası, Discord embedleri için gerekli meta etiketleri içermeli
         res.render('index', { videoData: videoLink.videoInfo });
 
     } catch (err) {
