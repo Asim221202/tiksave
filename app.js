@@ -59,6 +59,7 @@ async function fetchTikTokVideoFromProxy(url) {
 }
 
 // --- Instagram Proxy İşlemcisi ---
+// Bu fonksiyonu, her istek geldiğinde taze bir URL almak için kullanıyoruz.
 async function fetchInstagramMedia(url) {
     const tried = new Set();
     for (let i = 0; i < INSTAGRAM_PROXIES.length; i++) {
@@ -238,14 +239,24 @@ app.get('/:shortId', async (req, res) => {
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
 
         try {
-            if (isInstagram) videoData = await fetchInstagramMedia(videoLink.originalUrl);
-            else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com'))
+            // Instagram linki ise her zaman taze URL çek
+            if (isInstagram) {
+                const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
+                videoData = freshMediaInfo.media && freshMediaInfo.media.length > 0 ? freshMediaInfo.media[0] : null;
+                // Veritabanındaki kaydı güncel taze veriyle güncelle
+                videoLink.videoInfo = freshMediaInfo;
+                await videoLink.save();
+            } else if (!videoLink.originalUrl.includes('twitter.com') && !videoLink.originalUrl.includes('x.com')) {
+                // TikTok linki ise, her seferinde tekrar proxy üzerinden çek
                 videoData = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+                // Veritabanındaki kaydı güncel veriyle güncelle
+                videoLink.videoInfo = videoData;
+                await videoLink.save();
+            }
 
-            videoLink.videoInfo = videoData;
-            await videoLink.save();
         } catch (err) {
             console.error('Yeniden fetch hatası:', err.message);
+            // Hata olsa bile eski verilerle devam et
         }
 
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
@@ -253,11 +264,15 @@ app.get('/:shortId', async (req, res) => {
         const acceptsVideo = (req.headers['accept'] || '').includes('video/mp4');
 
         if (isDiscordOrTelegram || acceptsVideo) {
-            const redirectUrl = isInstagram ? videoData.media_url : videoData.hdplay || videoData.play || videoData.media_url;
+            // Instagram için video URL'yi doğru yerden al
+            const redirectUrl = isInstagram 
+                ? videoData.media_url 
+                : videoLink.videoInfo.hdplay || videoLink.videoInfo.play || videoLink.videoInfo.media_url;
+                
             if (redirectUrl) return res.redirect(307, redirectUrl);
         }
 
-        res.render('index', { videoData });
+        res.render('index', { videoData: videoLink.videoInfo });
 
     } catch (err) {
         res.status(500).send('Sunucu hatası');
