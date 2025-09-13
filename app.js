@@ -287,11 +287,52 @@ app.get('/:shortId', async (req, res) => {
                 }
             }
         }
-        
-        // Çoklu medya, web tarayıcıları veya embed'i engellenmiş durumlar için EJS sayfasını render et
-        res.render('index', { videoData: videoData, isInstagram, isTwitter, isTikTok, noembed: noembedParam });
+
+        // Embed meta verileri hazırla
+        const title = isInstagram 
+            ? `@${videoData.author?.username || 'unknown'}`
+            : isTikTok 
+                ? `@${videoData.author?.unique_id || 'unknown'}`
+                : `Video content`;
+
+        const description = isInstagram 
+            ? (videoData.caption || "Instagram media") 
+            : isTikTok 
+                ? (videoData.desc || "TikTok video") 
+                : "Shared video";
+
+        const thumbnail = isInstagram 
+            ? (videoData.media?.[0]?.thumbnail_url || videoData.media?.[0]?.media_url) 
+            : videoData.cover || null;
+
+        const videoUrl = isInstagram 
+            ? (videoData.media?.[0]?.videoUrl || null) 
+            : (videoData.play || null);
+
+        const ogTags = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <title>${title}</title>
+                <meta property="og:title" content="${title}" />
+                <meta property="og:description" content="${description}" />
+                ${thumbnail ? `<meta property="og:image" content="${thumbnail}" />` : ''}
+                ${videoUrl ? `<meta property="og:video" content="${videoUrl}" />` : ''}
+                <meta name="twitter:card" content="summary_large_image" />
+              </head>
+              <body>
+                <h1>${title}</h1>
+                <p>${description}</p>
+                <script>window.location.href = "${videoUrl || videoLink.originalUrl}"</script>
+              </body>
+            </html>
+        `;
+
+        res.send(ogTags);
 
     } catch (err) {
+        console.error('ShortId route error:', err);
         res.status(500).send('Sunucu hatası');
     }
 });
