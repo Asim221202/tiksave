@@ -289,45 +289,53 @@ app.get('/:shortId', async (req, res) => {
         }
 
         // Embed meta verileri hazırla
-        const title = isInstagram 
-            ? `@${videoData.author?.username || 'unknown'}`
-            : isTikTok 
-                ? `@${videoData.author?.unique_id || 'unknown'}`
-                : `Video content`;
+        // Embed meta verileri hazırla
+const title = isInstagram 
+    ? `Instagram post by @${videoData.author?.username || 'unknown'}`
+    : isTikTok 
+        ? `TikTok video by @${videoData.author?.unique_id || 'unknown'}`
+        : `Video content`;
 
-        const description = isInstagram 
-            ? (videoData.caption || "Instagram media") 
-            : isTikTok 
-                ? (videoData.desc || "TikTok video") 
-                : "Shared video";
+const description = isInstagram 
+    ? (videoData.caption || "Instagram media") 
+    : isTikTok 
+        ? (videoData.desc || "TikTok video") 
+        : "Shared media";
 
-        const thumbnail = isInstagram 
-            ? (videoData.media?.[0]?.thumbnail_url || videoData.media?.[0]?.media_url) 
-            : videoData.cover || null;
+// Tüm görselleri ekle (tek foto veya çoklu medya için)
+let ogImages = '';
+if (isInstagram && videoData.media) {
+    videoData.media.forEach(m => {
+        if (!m.is_video) { // sadece foto embedlensin
+            if (m.thumbnail_url) {
+                ogImages += `<meta property="og:image" content="${m.thumbnail_url}" />\n`;
+            } else if (m.media_url) {
+                ogImages += `<meta property="og:image" content="${m.media_url}" />\n`;
+            }
+        }
+    });
+} else if (videoData.cover) {
+    ogImages = `<meta property="og:image" content="${videoData.cover}" />`;
+}
 
-        const videoUrl = isInstagram 
-            ? (videoData.media?.[0]?.videoUrl || null) 
-            : (videoData.play || null);
-
-        const ogTags = `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <title>${title}</title>
-                <meta property="og:title" content="${title}" />
-                <meta property="og:description" content="${description}" />
-                ${thumbnail ? `<meta property="og:image" content="${thumbnail}" />` : ''}
-                ${videoUrl ? `<meta property="og:video" content="${videoUrl}" />` : ''}
-                <meta name="twitter:card" content="summary_large_image" />
-              </head>
-              <body>
-                <h1>${title}</h1>
-                <p>${description}</p>
-                <script>window.location.href = "${videoUrl || videoLink.originalUrl}"</script>
-              </body>
-            </html>
-        `;
+const ogTags = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <meta property="og:title" content="${title}" />
+        <meta property="og:description" content="${description}" />
+        ${ogImages}
+        <meta name="twitter:card" content="summary_large_image" />
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <p>${description}</p>
+        <script>window.location.href = "${videoData.play || videoLink.originalUrl}"</script>
+      </body>
+    </html>
+`;
 
         res.send(ogTags);
 
