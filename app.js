@@ -303,6 +303,30 @@ const description = isInstagram
         : "Shared media";
 
 // Tüm görselleri ekle (tek foto veya çoklu medya için)
+// Embed meta verileri hazırla
+let ogTags = '';
+
+const title = isInstagram 
+    ? `Instagram post by @${videoData.author?.username || 'unknown'}`
+    : isTikTok 
+        ? `TikTok video by @${videoData.author?.unique_id || 'unknown'}`
+        : `Video content`;
+
+const description = isInstagram 
+    ? (videoData.caption || "Instagram media") 
+    : isTikTok 
+        ? (videoData.desc || "TikTok video") 
+        : "Shared media";
+
+// Eğer tek video varsa embed yapma → direkt redirect
+if (
+    (isTikTok && videoData.play) || 
+    (isInstagram && videoData.media && videoData.media.length === 1 && videoData.media[0].is_video)
+) {
+    return res.redirect(videoData.play || videoData.media[0].media_url || videoLink.originalUrl);
+}
+
+// Çoklu medya (özellikle foto) varsa embed hazırla
 let ogImages = '';
 if (isInstagram && videoData.media) {
     videoData.media.forEach(m => {
@@ -318,7 +342,7 @@ if (isInstagram && videoData.media) {
     ogImages = `<meta property="og:image" content="${videoData.cover}" />`;
 }
 
-const ogTags = `
+ogTags = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -332,12 +356,12 @@ const ogTags = `
       <body>
         <h1>${title}</h1>
         <p>${description}</p>
-        <script>window.location.href = "${videoData.play || videoLink.originalUrl}"</script>
+        <script>window.location.href = "${videoLink.originalUrl}"</script>
       </body>
     </html>
 `;
 
-        res.send(ogTags);
+res.send(ogTags);
 
     } catch (err) {
         console.error('ShortId route error:', err);
