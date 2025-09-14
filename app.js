@@ -290,17 +290,7 @@ app.get('/:shortId', async (req, res) => {
 
         // Embed meta verileri hazırla
         // Embed meta verileri hazırla
-const title = isInstagram 
-    ? `Instagram post by @${videoData.author?.username || 'unknown'}`
-    : isTikTok 
-        ? `TikTok video by @${videoData.author?.unique_id || 'unknown'}`
-        : `Video content`;
 
-const description = isInstagram 
-    ? (videoData.caption || "Instagram media") 
-    : isTikTok 
-        ? (videoData.desc || "TikTok video") 
-        : "Shared media";
 
 // Tüm görselleri ekle (tek foto veya çoklu medya için)
 // Embed meta verileri hazırla
