@@ -58,18 +58,28 @@ async function fetchTikTokVideoFromProxy(url) {
 }
 
 // --- Instagram API İşlemcisi ---
+// Yeni Kod:
 async function fetchInstagramMedia(shortcode) {
     try {
-        const response = await axios.post(PYTHON_API_URL, { shortcode }, { timeout: 30000 });
-        if (response.data && response.data.success) {
+        // shortcode'u URL parametresi olarak ekle
+        const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
+        
+        // Python API'nizin dönen yanıtı (response.data) zaten JSON olduğu için
+        // doğrudan kullanabilirsiniz.
+        if (response.data && response.data.video_url) { // 'video_url' ile bir başarı kontrolü yapabiliriz
             return response.data;
         }
         throw new Error("Python API'den başarıyla veri alınamadı.");
     } catch (err) {
         console.error(`Python API hatası: ${err.message}`);
+        // Hata durumunda, Python API'nin döndüğü hata mesajını daha detaylı gösterebilirsiniz
+        if (err.response && err.response.data && err.response.data.error) {
+            console.error(`API'den gelen hata: ${err.response.data.error}`);
+        }
         throw err;
     }
 }
+
 
 // EJS & Middleware
 app.set('view engine', 'ejs');
