@@ -290,18 +290,28 @@ app.get('/:shortId', async (req, res) => {
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
 
-        if (isDiscordOrTelegram && !req.query.noembed) {
+        // TikTok veya Twitter linkleri için direkt redirect
+        if (!isInstagram && !req.query.noembed) {
             let mediaUrl = null;
             if (isTikTok && videoData.play) {
                 mediaUrl = videoData.play;
-            } else if (isInstagram && videoData.video_url) {
-                mediaUrl = videoData.video_url;
+            } else if (isTwitter && videoData.media_url) {
+                mediaUrl = videoData.media_url;
             }
             if (mediaUrl) {
                 return res.redirect(307, mediaUrl);
             }
         }
 
+        // --- DEĞİŞEN BÖLÜM: INSTAGRAM İÇİN VX.INSTAGRAM LİNKİ OLUŞTURMA ---
+        let ogUrl = videoLink.originalUrl;
+        if (isInstagram) {
+            // Instagram linkini vxinstagram'a dönüştürüyor
+            ogUrl = ogUrl.replace('www.instagram.com', 'www.vxinstagram.com');
+            ogUrl = ogUrl.replace('instagram.com', 'vxinstagram.com'); // Ek güvenlik için
+        }
+        // --- DEĞİŞEN BÖLÜM SONU ---
+        
         let ogTags = '';
         const title = isInstagram
             ? `Instagram post by @${videoData.user?.username || 'unknown'}`
@@ -314,13 +324,6 @@ app.get('/:shortId', async (req, res) => {
             : isTikTok
                 ? (videoData.desc || "TikTok video")
                 : "Shared media";
-
-        if (
-            (isTikTok && videoData.play) ||
-            (isInstagram && videoData.video_url)
-        ) {
-            return res.redirect(videoData.play || videoData.video_url || videoLink.originalUrl);
-        }
         
         let ogImages = '';
         if (isInstagram && videoData.image_urls) {
@@ -331,6 +334,7 @@ app.get('/:shortId', async (req, res) => {
             ogImages = `<meta property="og:image" content="${videoData.cover}" />`;
         }
 
+        // og:url ve og:video etiketlerini kullanarak Discord'a doğru bilgiyi iletiyoruz.
         ogTags = `
             <!DOCTYPE html>
             <html>
@@ -341,6 +345,10 @@ app.get('/:shortId', async (req, res) => {
                 <meta property="og:description" content="${description}" />
                 ${ogImages}
                 <meta name="twitter:card" content="summary_large_image" />
+                <meta property="og:url" content="${ogUrl}" />
+                ${isInstagram && videoData.video_url ? `<meta property="og:video:url" content="${videoData.video_url}" />` : ''}
+                ${isInstagram && videoData.video_url ? `<meta property="og:video:secure_url" content="${videoData.video_url}" />` : ''}
+                ${isInstagram && videoData.video_url ? `<meta property="og:video:type" content="video/mp4" />` : ''}
               </head>
               <body>
                 <h1>${title}</h1>
