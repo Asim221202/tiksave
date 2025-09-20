@@ -11,6 +11,7 @@ const VideoLink = require('./models/VideoLink');
 const { customAlphabet } = require('nanoid');
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 7);
 const axios = require('axios');
+const Redis = require('ioredis'); // YENİ: Redis kütüphanesi
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,12 +21,17 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const CALLBACK_URL = process.env.DISCORD_CALLBACK_URL;
 
+// --- REDIS BAĞLANTISI ---
+const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+redis.on('connect', () => console.log('Redis connected'));
+redis.on('error', (err) => console.error('Redis connection error:', err));
+
+
 // --- PROXY LİSTELERİ ---
 const TIKTOK_PROXIES = [
     process.env.PROXY1_URL,
     process.env.PROXY2_URL,
     process.env.PROXY3_URL,
-    process.env.PROXY4_URL,
 ];
 
 // Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
@@ -57,8 +63,6 @@ async function fetchTikTokVideoFromProxy(url) {
     throw new Error("Tüm TikTok proxyleri başarısız oldu veya limit aşıldı");
 }
 
-// --- Instagram API İşlemcisi - ARTIK KULLANILMIYOR
-// async function fetchInstagramMedia(url) { ... }
 
 // EJS & Middleware
 app.set('view engine', 'ejs');
@@ -123,7 +127,7 @@ app.get('/dashboard', (req, res) => {
 
 // --- API ROTLARI ---
 
-// TikTok
+// TikTok - GÜNCELLENMİŞ ROTA
 app.post('/api/tiktok-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
@@ -133,13 +137,17 @@ app.post('/api/tiktok-process', async (req, res) => {
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
+
+        // YENİ: Veriyi Redis'e kaydet
+        await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); // 7 günlük TTL
+
         res.json({ success: true, shortId, videoInfo });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Tüm proxyler başarısız oldu veya limit aşıldı.' });
     }
 });
 
-// Instagram - YENİLENEN ROTA
+// Instagram
 app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
@@ -147,7 +155,6 @@ app.post('/api/instagram-process', async (req, res) => {
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
         
-        // Sadece orijinal URL ve tipini kaydediyoruz
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: { type: 'instagram' } });
         await newVideoLink.save();
         
@@ -224,7 +231,7 @@ app.get('/proxy-download', async (req, res) => {
     }
 });
 
-// ShortId yönlendirme - YENİLENEN ROTA
+// ShortId yönlendirme - GÜNCELLENMİŞ ROTA
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
@@ -242,6 +249,27 @@ app.get('/:shortId', async (req, res) => {
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
+        const isTikTok = videoLink.originalUrl.includes('tiktok.com');
+
+        let videoData = videoLink.videoInfo;
+
+        // YENİ: Önce Redis'ten veriyi çekmeyi dene
+        if (isTikTok) {
+            const cachedVideoInfo = await redis.get(`tiktok:${shortId}`);
+            if (cachedVideoInfo) {
+                videoData = JSON.parse(cachedVideoInfo);
+                console.log(`Veri Redis'ten çekildi: ${shortId}`);
+            } else {
+                console.log(`Redis'te veri bulunamadı, API'den çekiliyor: ${shortId}`);
+                // Eski kodun API'den veri çekme ve veritabanını güncelleme mantığı
+                const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+                videoData = freshVideoInfo;
+                videoLink.videoInfo = freshVideoInfo;
+                await videoLink.save();
+                // YENİ: API'den çekilen veriyi Redis'e kaydet
+                await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(freshVideoInfo));
+            }
+        }
         
         // Instagram linki Discord botundan geldiyse direkt vxinstagram'a yönlendir
         if (isDiscordOrTelegram && isInstagram) {
@@ -250,12 +278,12 @@ app.get('/:shortId', async (req, res) => {
                 .replace('instagram.com/reel/', 'vxinstagram.com/reel/');
             return res.redirect(307, vxUrl);
         } else if (isDiscordOrTelegram && !isInstagram) {
-            // TikTok ve Twitter için eski redirect mantığı
-            const videoData = videoLink.videoInfo;
+            // TikTok ve Twitter için redirect mantığı
+            const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
             let mediaUrl = null;
-            if (videoLink.originalUrl.includes('tiktok.com') && videoData.play) {
+            if (isTikTok && videoData.play) {
                 mediaUrl = videoData.play;
-            } else if (videoLink.originalUrl.includes('twitter.com') && videoData.media_url) {
+            } else if (isTwitter && videoData.media_url) {
                 mediaUrl = videoData.media_url;
             }
             if (mediaUrl) {
