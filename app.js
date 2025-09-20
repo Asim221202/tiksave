@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -66,7 +65,7 @@ async function fetchInstagramMedia(shortcode) {
         
         // Python API'nizin dönen yanıtı (response.data) zaten JSON olduğu için
         // doğrudan kullanabilirsiniz.
-        if (response.data && response.data.video_url) { // 'video_url' ile bir başarı kontrolü yapabiliriz
+        if (response.data && (response.data.video_url || (response.data.image_urls && response.data.image_urls.length > 0))) {
             return response.data;
         }
         throw new Error("Python API'den başarıyla veri alınamadı.");
@@ -165,11 +164,12 @@ app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
     try {
-        // Shortcode'u URL'den çıkar
-        const urlParts = url.split('/');
-        const shortcode = urlParts.find(part => part.length >= 10);
+        // Shortcode'u güvenilir bir şekilde URL'den çıkar
+        const shortcodeMatch = url.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
+        const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
+
         if (!shortcode) {
-            return res.status(400).json({ success: false, message: 'Geçersiz Instagram URL' });
+            return res.status(400).json({ success: false, message: 'Geçersiz Instagram URL veya shortcode bulunamadı.' });
         }
         
         // Yeni fetch fonksiyonumuzu kullanarak Python API'den veri al
@@ -272,8 +272,9 @@ app.get('/:shortId', async (req, res) => {
         try {
             if (isInstagram) {
                 // Shortcode'u yeniden çıkar
-                const urlParts = videoLink.originalUrl.split('/');
-                const shortcode = urlParts.find(part => part.length >= 10);
+                const shortcodeMatch = videoLink.originalUrl.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
+                const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
+
                 if (shortcode) {
                     const freshMediaInfo = await fetchInstagramMedia(shortcode);
                     videoData = freshMediaInfo;
@@ -328,11 +329,9 @@ app.get('/:shortId', async (req, res) => {
         }
         
         let ogImages = '';
-        if (isInstagram && videoData.media) {
-            videoData.media.forEach(m => {
-                if (!m.is_video) { // Sadece foto embedlensin
-                    ogImages += `<meta property="og:image" content="${m.thumbnail_url || m.media_url}" />\n`;
-                }
+        if (isInstagram && videoData.image_urls) {
+            videoData.image_urls.forEach(imageUrl => {
+                 ogImages += `<meta property="og:image" content="${imageUrl}" />\n`;
             });
         } else if (videoData.cover) {
             ogImages = `<meta property="og:image" content="${videoData.cover}" />`;
