@@ -60,6 +60,7 @@ async function fetchTikTokVideoFromProxy(url) {
 async function fetchInstagramMedia(shortcode) {
     try {
         const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
+        
         if (!response.data || (!response.data.video_url && (!response.data.image_urls || response.data.image_urls.length === 0))) {
             console.error("Python API'den beklenen veri yapısı dönmedi. Gelen veri:", response.data);
             throw new Error("Python API'den başarıyla veri alınamadı veya format hatalı.");
@@ -159,7 +160,8 @@ app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
     try {
-        const shortcodeMatch = url.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
+        const urlWithoutQuery = url.split('?')[0];
+        const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
         const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
 
         if (!shortcode) {
@@ -270,7 +272,8 @@ app.get('/:shortId', async (req, res) => {
         
         try {
             if (isInstagram) {
-                const shortcodeMatch = videoLink.originalUrl.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
+                const urlWithoutQuery = videoLink.originalUrl.split('?')[0];
+                const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
                 const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
 
                 if (shortcode) {
