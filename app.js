@@ -27,7 +27,7 @@ const TIKTOK_PROXIES = [
     process.env.PROXY3_URL,
 ];
 
-// Python API'nin URL'si
+// Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
 const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
 // Rastgele proxy seç
@@ -56,34 +56,8 @@ async function fetchTikTokVideoFromProxy(url) {
     throw new Error("Tüm TikTok proxyleri başarısız oldu veya limit aşıldı");
 }
 
-// --- Instagram API İşlemcisi ---
-async function fetchInstagramMedia(url) {
-    try {
-        const urlWithoutQuery = url.split('?')[0];
-        const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
-        const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
-
-        if (!shortcode) {
-            console.error('URL\'den shortcode alınamadı:', url);
-            throw new Error('Geçersiz Instagram URL veya shortcode bulunamadı.');
-        }
-
-        const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
-        
-        if (!response.data || (!response.data.video_url && (!response.data.image_urls || response.data.image_urls.length === 0))) {
-            console.error("Python API'den beklenen veri yapısı dönmedi. Gelen veri:", response.data);
-            throw new Error("Python API'den başarıyla veri alınamadı veya format hatalı.");
-        }
-        return response.data;
-    } catch (err) {
-        console.error(`Python API hatası: ${err.message}`);
-        if (err.response && err.response.data && err.response.data.error) {
-            console.error(`API'den gelen hata: ${err.response.data.error}`);
-        }
-        throw err;
-    }
-}
-
+// --- Instagram API İşlemcisi - ARTIK KULLANILMIYOR
+// async function fetchInstagramMedia(url) { ... }
 
 // EJS & Middleware
 app.set('view engine', 'ejs');
@@ -103,7 +77,7 @@ app.use(passport.session());
 
 passport.use(new DiscordStrategy({
     clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
+    clientSecret: CLIENT.SECRET,
     callbackURL: CALLBACK_URL,
     scope: ['identify', 'guilds']
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
@@ -164,20 +138,19 @@ app.post('/api/tiktok-process', async (req, res) => {
     }
 });
 
-// Instagram
+// Instagram - YENİLENEN ROTA
 app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
     try {
-        const mediaInfo = await fetchInstagramMedia(url);
-
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
         
-        const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: mediaInfo });
+        // Sadece orijinal URL ve tipini kaydediyoruz
+        const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: { type: 'instagram' } });
         await newVideoLink.save();
         
-        res.json({ success: true, shortId, mediaInfo });
+        res.json({ success: true, shortId });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Instagram işlemi başarısız oldu.' });
     }
@@ -250,11 +223,10 @@ app.get('/proxy-download', async (req, res) => {
     }
 });
 
-// ShortId yönlendirme
+// ShortId yönlendirme - YENİLENEN ROTA
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
-    // Geçersiz kısa kodları engelle
     if (shortId.length < 7 || shortId.includes('http')) {
         return res.status(404).send('Video bulunamadı');
     }
@@ -266,99 +238,32 @@ app.get('/:shortId', async (req, res) => {
             return res.status(404).send('Video bulunamadı');
         }
 
-        let videoData = videoLink.videoInfo;
-        const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
-        const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
-        const isTikTok = !isInstagram && !isTwitter;
-        
-        try {
-            if (isInstagram) {
-                const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
-                videoData = freshMediaInfo;
-                videoLink.videoInfo = freshMediaInfo;
-                await videoLink.save();
-            } else if (isTikTok) {
-                const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
-                videoData = freshVideoInfo;
-                videoLink.videoInfo = freshVideoInfo;
-                await videoLink.save();
-            }
-        } catch (err) {
-            console.error('Veri güncelleme hatası:', err.message);
-        }
-
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
-
-        // TikTok veya Twitter linkleri için direkt redirect
-        if (!isInstagram && !req.query.noembed) {
+        const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
+        
+        // Instagram linki Discord botundan geldiyse direkt vxinstagram'a yönlendir
+        if (isDiscordOrTelegram && isInstagram) {
+            const vxUrl = videoLink.originalUrl
+                .replace('instagram.com/p/', 'vxinstagram.com/p/')
+                .replace('instagram.com/reel/', 'vxinstagram.com/reel/');
+            return res.redirect(307, vxUrl);
+        } else if (isDiscordOrTelegram && !isInstagram) {
+            // TikTok ve Twitter için eski redirect mantığı
+            const videoData = videoLink.videoInfo;
             let mediaUrl = null;
-            if (isTikTok && videoData.play) {
+            if (videoLink.originalUrl.includes('tiktok.com') && videoData.play) {
                 mediaUrl = videoData.play;
-            } else if (isTwitter && videoData.media_url) {
+            } else if (videoLink.originalUrl.includes('twitter.com') && videoData.media_url) {
                 mediaUrl = videoData.media_url;
             }
             if (mediaUrl) {
                 return res.redirect(307, mediaUrl);
             }
         }
-
-        // --- DEĞİŞEN BÖLÜM: INSTAGRAM İÇİN VX.INSTAGRAM LİNKİ OLUŞTURMA ---
-        let ogUrl = videoLink.originalUrl;
-        if (isInstagram) {
-            // Instagram linkini vxinstagram'a dönüştürüyor
-            ogUrl = ogUrl.replace('www.instagram.com', 'www.vxinstagram.com');
-            ogUrl = ogUrl.replace('instagram.com', 'vxinstagram.com'); // Ek güvenlik için
-        }
-        // --- DEĞİŞEN BÖLÜM SONU ---
         
-        let ogTags = '';
-        const title = isInstagram
-            ? `Instagram post by @${videoData.user?.username || 'unknown'}`
-            : isTikTok
-                ? `TikTok video by @${videoData.author?.unique_id || 'unknown'}`
-                : `Video content`;
-
-        const description = isInstagram
-            ? (videoData.caption || "Instagram media")
-            : isTikTok
-                ? (videoData.desc || "TikTok video")
-                : "Shared media";
-        
-        let ogImages = '';
-        if (isInstagram && videoData.image_urls) {
-            videoData.image_urls.forEach(imageUrl => {
-                 ogImages += `<meta property="og:image" content="${imageUrl}" />\n`;
-            });
-        } else if (videoData.cover) {
-            ogImages = `<meta property="og:image" content="${videoData.cover}" />`;
-        }
-
-        // og:url ve og:video etiketlerini kullanarak Discord'a doğru bilgiyi iletiyoruz.
-        ogTags = `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <title>${title}</title>
-                <meta property="og:title" content="${title}" />
-                <meta property="og:description" content="${description}" />
-                ${ogImages}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta property="og:url" content="${ogUrl}" />
-                ${isInstagram && videoData.video_url ? `<meta property="og:video:url" content="${videoData.video_url}" />` : ''}
-                ${isInstagram && videoData.video_url ? `<meta property="og:video:secure_url" content="${videoData.video_url}" />` : ''}
-                ${isInstagram && videoData.video_url ? `<meta property="og:video:type" content="video/mp4" />` : ''}
-              </head>
-              <body>
-                <h1>${title}</h1>
-                <p>${description}</p>
-                <script>window.location.href = "${videoLink.originalUrl}"</script>
-              </body>
-            </html>
-        `;
-
-        res.send(ogTags);
+        // Normal kullanıcılar için orijinal linke yönlendirme
+        res.redirect(videoLink.originalUrl);
 
     } catch (err) {
         console.error('ShortId route error:', err);
