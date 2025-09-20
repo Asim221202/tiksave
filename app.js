@@ -77,7 +77,7 @@ app.use(passport.session());
 
 passport.use(new DiscordStrategy({
     clientID: CLIENT_ID,
-    clientSecret: CLIENT.SECRET,
+    clientSecret: CLIENT_SECRET,
     callbackURL: CALLBACK_URL,
     scope: ['identify', 'guilds']
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
