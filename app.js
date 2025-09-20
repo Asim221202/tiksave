@@ -59,17 +59,17 @@ async function fetchTikTokVideoFromProxy(url) {
 // --- Instagram API İşlemcisi ---
 async function fetchInstagramMedia(shortcode) {
     try {
-        // shortcode'u URL parametresi olarak ekle
         const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
         
-        // HATA GİDERME: Gelen yanıtı kontrol et
+        // HATA GİDERME: Gelen yanıtı kontrol et ve logla
         if (!response.data) {
+             console.error("Python API'den boş yanıt geldi.");
              throw new Error("Python API'den boş yanıt geldi.");
         }
         
+        console.log("Python API'den gelen ham veri:", JSON.stringify(response.data, null, 2));
+
         // HATA GİDERME: Gelen veri yapısını doğrula
-        // 'xdt_api__v1__media__shortcode__web_info' gibi eski bir anahtar yerine,
-        // yeni API'nin beklenen anahtarlarını kontrol et.
         if (response.data.video_url || (response.data.image_urls && response.data.image_urls.length > 0)) {
             return response.data;
         }
@@ -80,7 +80,6 @@ async function fetchInstagramMedia(shortcode) {
 
     } catch (err) {
         console.error(`Python API hatası: ${err.message}`);
-        // Hata durumunda, Python API'nin döndüğü hata mesajını daha detaylı gösterebilirsiniz
         if (err.response && err.response.data && err.response.data.error) {
             console.error(`API'den gelen hata: ${err.response.data.error}`);
         }
@@ -269,8 +268,10 @@ app.get('/proxy-download', async (req, res) => {
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
-    // HATA GİDERME: Geçersiz kısa kodları engelle
-    if (shortId.includes('https') || shortId.includes('http')) {
+    // HATA GİDERME: Kısa kodun geçerli olup olmadığını kontrol et
+    // Eğer shortId 7 karakterden kısa veya https/http içeriyorsa, geçersiz say
+    const isValidShortId = shortId.length >= 7 && !shortId.includes('http');
+    if (!isValidShortId) {
         console.error('Geçersiz kısa kod isteği tespit edildi:', shortId);
         return res.status(404).send('Video bulunamadı');
     }
