@@ -57,8 +57,17 @@ async function fetchTikTokVideoFromProxy(url) {
 }
 
 // --- Instagram API İşlemcisi ---
-async function fetchInstagramMedia(shortcode) {
+async function fetchInstagramMedia(url) {
     try {
+        const urlWithoutQuery = url.split('?')[0];
+        const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
+        const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
+
+        if (!shortcode) {
+            console.error('URL\'den shortcode alınamadı:', url);
+            throw new Error('Geçersiz Instagram URL veya shortcode bulunamadı.');
+        }
+
         const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
         
         if (!response.data || (!response.data.video_url && (!response.data.image_urls || response.data.image_urls.length === 0))) {
@@ -160,15 +169,7 @@ app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
     try {
-        const urlWithoutQuery = url.split('?')[0];
-        const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
-        const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
-
-        if (!shortcode) {
-            return res.status(400).json({ success: false, message: 'Geçersiz Instagram URL veya shortcode bulunamadı.' });
-        }
-        
-        const mediaInfo = await fetchInstagramMedia(shortcode);
+        const mediaInfo = await fetchInstagramMedia(url);
 
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
@@ -272,16 +273,10 @@ app.get('/:shortId', async (req, res) => {
         
         try {
             if (isInstagram) {
-                const urlWithoutQuery = videoLink.originalUrl.split('?')[0];
-                const shortcodeMatch = urlWithoutQuery.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
-                const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
-
-                if (shortcode) {
-                    const freshMediaInfo = await fetchInstagramMedia(shortcode);
-                    videoData = freshMediaInfo;
-                    videoLink.videoInfo = freshMediaInfo;
-                    await videoLink.save();
-                }
+                const freshMediaInfo = await fetchInstagramMedia(videoLink.originalUrl);
+                videoData = freshMediaInfo;
+                videoLink.videoInfo = freshMediaInfo;
+                await videoLink.save();
             } else if (isTikTok) {
                 const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
                 videoData = freshVideoInfo;
@@ -364,4 +359,3 @@ app.get('/:shortId', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
-
