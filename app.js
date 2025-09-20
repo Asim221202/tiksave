@@ -28,7 +28,7 @@ const TIKTOK_PROXIES = [
 ];
 
 // Python API'nin URL'si
-const PYTHON_API_URL = process.env.PYTHON_API_URL; // Buraya Render'da host ettiğin API URL'ini ekle
+const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
 // Rastgele proxy seç
 function getRandomProxy(proxies) {
@@ -60,24 +60,11 @@ async function fetchTikTokVideoFromProxy(url) {
 async function fetchInstagramMedia(shortcode) {
     try {
         const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
-        
-        // HATA GİDERME: Gelen yanıtı kontrol et ve logla
-        if (!response.data) {
-             console.error("Python API'den boş yanıt geldi.");
-             throw new Error("Python API'den boş yanıt geldi.");
+        if (!response.data || (!response.data.video_url && (!response.data.image_urls || response.data.image_urls.length === 0))) {
+            console.error("Python API'den beklenen veri yapısı dönmedi. Gelen veri:", response.data);
+            throw new Error("Python API'den başarıyla veri alınamadı veya format hatalı.");
         }
-        
-        console.log("Python API'den gelen ham veri:", JSON.stringify(response.data, null, 2));
-
-        // HATA GİDERME: Gelen veri yapısını doğrula
-        if (response.data.video_url || (response.data.image_urls && response.data.image_urls.length > 0)) {
-            return response.data;
-        }
-
-        // Eğer beklenen veri yapısı yoksa, detaylı hata fırlat
-        console.error("API'den beklenen veri yapısı dönmedi. Gelen veri:", response.data);
-        throw new Error("Python API'den başarıyla veri alınamadı veya format hatalı.");
-
+        return response.data;
     } catch (err) {
         console.error(`Python API hatası: ${err.message}`);
         if (err.response && err.response.data && err.response.data.error) {
@@ -172,7 +159,6 @@ app.post('/api/instagram-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
     try {
-        // Shortcode'u güvenilir bir şekilde URL'den çıkar
         const shortcodeMatch = url.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
         const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
 
@@ -180,17 +166,14 @@ app.post('/api/instagram-process', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Geçersiz Instagram URL veya shortcode bulunamadı.' });
         }
         
-        // Yeni fetch fonksiyonumuzu kullanarak Python API'den veri al
         const mediaInfo = await fetchInstagramMedia(shortcode);
 
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
         
-        // Python API'nin döndürdüğü veri yapısını kaydet
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: mediaInfo });
         await newVideoLink.save();
         
-        // Yanıtta mediaInfo'yu geri döndür
         res.json({ success: true, shortId, mediaInfo });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Instagram işlemi başarısız oldu.' });
@@ -268,35 +251,25 @@ app.get('/proxy-download', async (req, res) => {
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
-    // HATA GİDERME: Kısa kodun geçerli olup olmadığını kontrol et
-    // Eğer shortId 7 karakterden kısa veya https/http içeriyorsa, geçersiz say
-    const isValidShortId = shortId.length >= 7 && !shortId.includes('http');
-    if (!isValidShortId) {
-        console.error('Geçersiz kısa kod isteği tespit edildi:', shortId);
+    // Geçersiz kısa kodları engelle
+    if (shortId.length < 7 || shortId.includes('http')) {
         return res.status(404).send('Video bulunamadı');
     }
     
     try {
         const videoLink = await VideoLink.findOne({ shortId: req.params.shortId });
-        if (!videoLink) return res.status(404).send('Video bulunamadı');
-
-        const noembedParam = req.query.noembed === 'true';
+        if (!videoLink) {
+            console.error('Veritabanında video bulunamadı, shortId:', shortId);
+            return res.status(404).send('Video bulunamadı');
+        }
 
         let videoData = videoLink.videoInfo;
         const isInstagram = videoLink.originalUrl.includes('instagram.com') || videoLink.originalUrl.includes('instagr.am');
         const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
         const isTikTok = !isInstagram && !isTwitter;
         
-        // Bu loglamaları ekledim. Hangi URL'in ne olarak algılandığını görmek için loglara bak.
-        console.log(`--- Yönlendirme Kontrolü ---`);
-        console.log(`Original URL: ${videoLink.originalUrl}`);
-        console.log(`isInstagram: ${isInstagram}`);
-        console.log(`isTikTok: ${isTikTok}`);
-
         try {
             if (isInstagram) {
-                console.log('--- Instagram URL\'i olarak işleniyor...');
-                // Shortcode'u yeniden çıkar
                 const shortcodeMatch = videoLink.originalUrl.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
                 const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
 
@@ -304,14 +277,14 @@ app.get('/:shortId', async (req, res) => {
                     const freshMediaInfo = await fetchInstagramMedia(shortcode);
                     videoData = freshMediaInfo;
                     videoLink.videoInfo = freshMediaInfo;
+                    await videoLink.save();
                 }
             } else if (isTikTok) {
-                console.log('--- TikTok URL\'i olarak işleniyor...');
                 const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
                 videoData = freshVideoInfo;
                 videoLink.videoInfo = freshVideoInfo;
+                await videoLink.save();
             }
-            await videoLink.save();
         } catch (err) {
             console.error('Veri güncelleme hatası:', err.message);
         }
@@ -319,17 +292,15 @@ app.get('/:shortId', async (req, res) => {
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
         const isDiscordOrTelegram = userAgent.includes('discordbot') || userAgent.includes('telegrambot');
 
-        if (!noembedParam) {
-            if (isDiscordOrTelegram) {
-                let mediaUrl = null;
-                if (isTikTok && videoData.play) {
-                    mediaUrl = videoData.play;
-                } else if (isInstagram && videoData.video_url) { // Tek video ise direkt yönlendir
-                    mediaUrl = videoData.video_url;
-                }
-                if (mediaUrl) {
-                    return res.redirect(307, mediaUrl);
-                }
+        if (isDiscordOrTelegram && !req.query.noembed) {
+            let mediaUrl = null;
+            if (isTikTok && videoData.play) {
+                mediaUrl = videoData.play;
+            } else if (isInstagram && videoData.video_url) {
+                mediaUrl = videoData.video_url;
+            }
+            if (mediaUrl) {
+                return res.redirect(307, mediaUrl);
             }
         }
 
@@ -346,7 +317,6 @@ app.get('/:shortId', async (req, res) => {
                 ? (videoData.desc || "TikTok video")
                 : "Shared media";
 
-        // Tek video varsa direkt yönlendir
         if (
             (isTikTok && videoData.play) ||
             (isInstagram && videoData.video_url)
@@ -391,3 +361,4 @@ app.get('/:shortId', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+
