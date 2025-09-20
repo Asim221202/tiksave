@@ -57,18 +57,27 @@ async function fetchTikTokVideoFromProxy(url) {
 }
 
 // --- Instagram API İşlemcisi ---
-// Yeni Kod:
 async function fetchInstagramMedia(shortcode) {
     try {
         // shortcode'u URL parametresi olarak ekle
         const response = await axios.get(`${PYTHON_API_URL}?shortcode=${shortcode}`, { timeout: 30000 });
         
-        // Python API'nizin dönen yanıtı (response.data) zaten JSON olduğu için
-        // doğrudan kullanabilirsiniz.
-        if (response.data && (response.data.video_url || (response.data.image_urls && response.data.image_urls.length > 0))) {
+        // HATA GİDERME: Gelen yanıtı kontrol et
+        if (!response.data) {
+             throw new Error("Python API'den boş yanıt geldi.");
+        }
+        
+        // HATA GİDERME: Gelen veri yapısını doğrula
+        // 'xdt_api__v1__media__shortcode__web_info' gibi eski bir anahtar yerine,
+        // yeni API'nin beklenen anahtarlarını kontrol et.
+        if (response.data.video_url || (response.data.image_urls && response.data.image_urls.length > 0)) {
             return response.data;
         }
-        throw new Error("Python API'den başarıyla veri alınamadı.");
+
+        // Eğer beklenen veri yapısı yoksa, detaylı hata fırlat
+        console.error("API'den beklenen veri yapısı dönmedi. Gelen veri:", response.data);
+        throw new Error("Python API'den başarıyla veri alınamadı veya format hatalı.");
+
     } catch (err) {
         console.error(`Python API hatası: ${err.message}`);
         // Hata durumunda, Python API'nin döndüğü hata mesajını daha detaylı gösterebilirsiniz
@@ -258,6 +267,14 @@ app.get('/proxy-download', async (req, res) => {
 
 // ShortId yönlendirme
 app.get('/:shortId', async (req, res) => {
+    const { shortId } = req.params;
+    
+    // HATA GİDERME: Geçersiz kısa kodları engelle
+    if (shortId.includes('https') || shortId.includes('http')) {
+        console.error('Geçersiz kısa kod isteği tespit edildi:', shortId);
+        return res.status(404).send('Video bulunamadı');
+    }
+    
     try {
         const videoLink = await VideoLink.findOne({ shortId: req.params.shortId });
         if (!videoLink) return res.status(404).send('Video bulunamadı');
@@ -269,8 +286,15 @@ app.get('/:shortId', async (req, res) => {
         const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
         const isTikTok = !isInstagram && !isTwitter;
         
+        // Bu loglamaları ekledim. Hangi URL'in ne olarak algılandığını görmek için loglara bak.
+        console.log(`--- Yönlendirme Kontrolü ---`);
+        console.log(`Original URL: ${videoLink.originalUrl}`);
+        console.log(`isInstagram: ${isInstagram}`);
+        console.log(`isTikTok: ${isTikTok}`);
+
         try {
             if (isInstagram) {
+                console.log('--- Instagram URL\'i olarak işleniyor...');
                 // Shortcode'u yeniden çıkar
                 const shortcodeMatch = videoLink.originalUrl.match(/(?:(?:instagram\.com|instagr\.am)\/(?:p|reel|tv)\/)?([a-zA-Z0-9_-]+)/);
                 const shortcode = shortcodeMatch ? shortcodeMatch[1] : null;
@@ -281,6 +305,7 @@ app.get('/:shortId', async (req, res) => {
                     videoLink.videoInfo = freshMediaInfo;
                 }
             } else if (isTikTok) {
+                console.log('--- TikTok URL\'i olarak işleniyor...');
                 const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
                 videoData = freshVideoInfo;
                 videoLink.videoInfo = freshVideoInfo;
@@ -298,8 +323,8 @@ app.get('/:shortId', async (req, res) => {
                 let mediaUrl = null;
                 if (isTikTok && videoData.play) {
                     mediaUrl = videoData.play;
-                } else if (isInstagram && videoData.media && videoData.media.length === 1) {
-                    mediaUrl = videoData.media[0].media_url;
+                } else if (isInstagram && videoData.video_url) { // Tek video ise direkt yönlendir
+                    mediaUrl = videoData.video_url;
                 }
                 if (mediaUrl) {
                     return res.redirect(307, mediaUrl);
