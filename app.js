@@ -1,5 +1,4 @@
-// KRİTİK DÜZELTME: İlk satırdaki 'Const' artık 'const'
-const express = require('express'); 
+const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const https = require('https');
@@ -12,7 +11,7 @@ const VideoLink = require('./models/VideoLink');
 const { customAlphabet } = require('nanoid');
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 7);
 const axios = require('axios');
-const Redis = require('ioredis'); // Redis kütüphanesi
+// Redis kütüphanesi kaldırıldı
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,10 +21,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const CALLBACK_URL = process.env.DISCORD_CALLBACK_URL;
 
-// --- REDIS BAĞLANTISI ---
-const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
-redis.on('connect', () => console.log('Redis connected'));
-redis.on('error', (err) => console.error('Redis connection error:', err));
+// --- REDIS BAĞLANTISI KALDIRILDI ---
 
 
 // --- PROXY LİSTELERİ ---
@@ -54,7 +50,6 @@ async function fetchTikTokVideoFromProxy(url) {
          throw new Error("Kullanılabilir TikTok proxy'si yok.");
     }
     
-    // Her proxy'yi birden fazla deneme şansı ver
     for (let i = 0; i < availableProxies.length * 2; i++) { 
         const proxy = getRandomProxy(availableProxies);
         if (tried.has(proxy) && tried.size === availableProxies.length) continue;
@@ -135,7 +130,7 @@ app.get('/dashboard', (req, res) => {
 
 // --- API ROTLARI ---
 
-// TikTok - DÜZELTİLDİ: Client'ın beklediği alanları döndürür
+// TikTok - Redis kaydı kaldırıldı
 app.post('/api/tiktok-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
@@ -147,10 +142,8 @@ app.post('/api/tiktok-process', async (req, res) => {
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
 
-        // Veriyi Redis'e kaydet (7 günlük TTL)
-        await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); 
+        // Redis'e kaydetme satırı kaldırıldı
 
-        // Client-side'a beklenen detaylı veriyi gönder
         res.json({ 
             success: true, 
             shortId,
@@ -216,7 +209,7 @@ app.get('/api/info/:shortId', async (req, res) => {
     }
 });
 
-// Proxy download - DÜZELTİLDİ: Yeni TikTok alanlarını ve directUrl'ı destekler
+// Proxy download
 app.get('/proxy-download', async (req, res) => {
     const { shortId, type, username, url: directUrl, mediaIndex = 0 } = req.query; 
 
@@ -296,7 +289,7 @@ app.get('/proxy-download', async (req, res) => {
 });
 
 
-// ShortId yönlendirme - DÜZELTİLDİ: Redis'ten gelen veride MP4 linki yoksa yeniden çeker (Botlar için kritik)
+// ShortId yönlendirme - REDIS MANTIKSIZ HALE GETİRİLDİ, HER ZAMAN YENİDEN ÇEKİLİYOR
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
@@ -318,39 +311,19 @@ app.get('/:shortId', async (req, res) => {
 
         let videoData = videoLink.videoInfo;
 
-        // Redis kontrolü ve zorunlu yeniden çekme
+        // Redis mantığı tamamen kaldırıldı. TikTok ise her zaman API'den yeni veri çek
         if (isTikTok) {
-            const cachedVideoInfo = await redis.get(`tiktok:${shortId}`);
-            let needsRefetch = false;
+            console.log(`Redis kaldırıldı. API'den yeni veri çekiliyor: ${shortId}`);
             
-            if (cachedVideoInfo) {
-                videoData = JSON.parse(cachedVideoInfo);
-                console.log(`Veri Redis'ten çekildi: ${shortId}`);
+            const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
+            videoData = freshVideoInfo;
 
-                // KRİTİK KONTROL: Redis'ten gelen veride MP4 linki yoksa, yeniden çek
-                if (!videoData.play && !videoData.hdplay) {
-                    console.log(`Redis'ten çekilen veride MP4 bulunamadı, API'den yeniden çekiliyor: ${shortId}`);
-                    needsRefetch = true;
-                }
-            } else {
-                console.log(`Redis'te veri bulunamadı veya süresi doldu, API'den çekiliyor: ${shortId}`);
-                needsRefetch = true;
-            }
-
-            // API'den yeniden çekim gerekiyorsa (Redis'te yoksa veya bozuksa)
-            if (needsRefetch) {
-                const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
-                videoData = freshVideoInfo;
-                // Veritabanını ve Redis'i yeni veriyle güncelle
-                videoLink.videoInfo = freshVideoInfo;
-                await videoLink.save();
-                // Redis'e 7 günlük TTL ile kaydetme: Videolar bu komutla kaydediliyor.
-                await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(freshVideoInfo));
-                console.log(`Yeni veri API'den çekilip Redis'e kaydedildi: ${shortId}`);
-            }
+            // MongoDB'deki kaydı yeni ve taze veriyle güncelle
+            videoLink.videoInfo = freshVideoInfo;
+            await videoLink.save();
         }
         
-        // Bot yönlendirme mantığı (Botu bozan kısım burasıydı, şimdi güncel veriyi kullanacak)
+        // Bot yönlendirme mantığı
         if (isDiscordOrTelegram && isInstagram) {
             const vxUrl = videoLink.originalUrl
                 .replace('instagram.com/p/', 'vxinstagram.com/p/')
@@ -360,10 +333,10 @@ app.get('/:shortId', async (req, res) => {
             const isTwitter = videoLink.originalUrl.includes('twitter.com') || videoLink.originalUrl.includes('x.com');
             let mediaUrl = null;
             
-            // Botlar için HD linki tercih et
+            // Botlar için en iyi linki seç
             if (isTikTok && videoData.hdplay) {
                 mediaUrl = videoData.hdplay;
-            } else if (isTikTok && videoData.play) { // HD yoksa normal link
+            } else if (isTikTok && videoData.play) {
                 mediaUrl = videoData.play;
             } else if (isTwitter && videoData.media_url) {
                 mediaUrl = videoData.media_url;
