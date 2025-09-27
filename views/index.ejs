@@ -194,8 +194,16 @@
         .form-container {
             width: 100%;
             max-width: 600px;
-            margin: 0 auto 40px;
+            margin: 0 auto 10px; /* Azaltıldı */
             padding: 0 20px;
+        }
+        
+        #message-container { /* Yeni eklendi */
+            text-align: center;
+            color: #ff5252;
+            font-weight: 600;
+            margin-bottom: 20px;
+            min-height: 20px;
         }
 
         #mainForm {
@@ -249,8 +257,10 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         }
 
-        button.paste-btn { display: inline-block; }
-        button.clear-btn { display: none; }
+        button.paste-btn { display: inline-block;
+        }
+        button.clear-btn { display: none;
+        }
 
         button.fetch-btn {
             background-color: var(--primary-color);
@@ -314,7 +324,12 @@
             text-align: center;
         }
         
-        #preview-container video {
+        #video-player-container { /* Yeni eklendi */
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        #video-player-container video {
             width: 100%;
             max-width: 600px;
             border-radius: 16px;
@@ -548,7 +563,7 @@
         }
 
         .accordion.active .accordion-content {
-            max-height: 500px; 
+            max-height: 500px;
             padding: 0 18px;
         }
 
@@ -659,6 +674,23 @@
         Fast, secure, and easy to use.
     </p>
 
+    <div class="form-container">
+        <form id="mainForm">
+            <input type="text" id="videoUrl" placeholder="Paste TikTok or Instagram video link here..." required>
+            <div class="form-buttons">
+                <button type="button" class="paste-btn">Paste</button>
+                <button type="button" class="clear-btn">Clear</button>
+                <button type="submit" class="fetch-btn">Download</button>
+            </div>
+        </form>
+    </div>
+    
+    <div id="message-container">
+        <% if (message) { %>
+            <p><%= message %></p>
+        <% } %>
+    </div>
+    
     <% if (videoData) { %>
         <div id="preview-container" class="show" style="display: flex;">
             <% if (videoData.cover) { %>
@@ -669,18 +701,24 @@
                 <h2 id="preview-title"><%= videoData.title %></h2>
             <% } %>
 
-            <% if (videoData.hdplay || videoData.play) { %>
-                <video controls preload="metadata" poster="<%= videoData.cover || '' %>" style="width: 100%; max-width: 600px; border-radius: 16px; margin-top: 15px;">
-                    <source src="<%= videoData.hdplay || videoData.play %>" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-            <% } %>
+            <div id="video-player-container"> <% if (videoData.hdplay || videoData.play) { %>
+                    <video controls preload="metadata" poster="<%= videoData.cover || '' %>">
+                        <source src="<%= videoData.hdplay || videoData.play %>" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                <% } %>
+            </div>
+            
+            <p style="text-align: center; color: var(--text-secondary); max-width: 500px; margin-top: 10px;">
+                Your download options are ready! Select the format you want below.
+            </p>
         </div>
 
         <div id="options" style="display: flex;">
             <% if (videoData.music) { %>
                 <a class="download-btn" href="/proxy-download?url=<%= encodeURIComponent(videoData.music) %>&username=<%= encodeURIComponent(videoData.username) %>&type=music">🎵 MP3 (Audio Only)</a>
             <% } %>
+            
             <% if (videoData.play) { %>
                 <a class="download-btn" href="/proxy-download?url=<%= encodeURIComponent(videoData.play) %>&username=<%= encodeURIComponent(videoData.username) %>&type=play">📽️ SD Video (Normal Quality)</a>
             <% } %>
@@ -689,81 +727,75 @@
             <% } %>
         </div>
         
-        <div style="text-align: center; margin-top: 40px;">
-            <a href="/" style="color: var(--primary-color); font-size: 1.1rem; text-decoration: none;">➡️ Download Another Video</a>
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 40px;">
+            <a href="/" style="color: var(--primary-color);
+            font-size: 1.1rem; text-decoration: none; font-weight: 600;">➡️ Download Another Video</a>
         </div>
 
 
     <% } else { %>
-        <div class="form-container">
-            <form id="mainForm">
-                <input type="text" id="videoUrl" placeholder="Paste TikTok video link here..." required>
-                <div class="form-buttons">
-                    <button type="button" class="paste-btn">Paste</button>
-                    <button type="button" class="clear-btn">Clear</button>
-                    <button type="submit" class="fetch-btn">Download</button>
-                </div>
-            </form>
-        </div>
-        
         <div id="preview-container">
             <img id="preview-thumbnail" src="" alt="Video thumbnail" />
             <h2 id="preview-title"></h2>
+            <div id="video-player-container"></div> <p style="text-align: center; color: var(--text-secondary); max-width: 500px; margin-top: 10px;"></p>
         </div>
 
         <div id="options"></div>
 
     <% } %>
-</main>
+    </main>
 
     <div class="container">
-        <h2 class="section-title" id="features">Features</h2>
+        <h2 class="section-title" id="features">Tiks Save'in Öne Çıkan Özellikleri</h2>
         
         <div class="features-text-only">
             <div>
-                <h3>No Watermarks</h3>
+                <h3>No Watermarks (Filigransız)</h3>
                 <p>
-                    Download videos without watermarks. This allows you to use the video cleanly and professionally anywhere you want.
+                    Download videos without watermarks. This allows you to use the video cleanly and professionally anywhere you want. Tiks Save ensures the highest possible quality for your watermark-free downloads.
                 </p>
             </div>
             
             <div>
-                <h3>High Quality</h3>
+                <h3>High Quality (Yüksek Kalite)</h3>
                 <p>
-                    Experience the best image and sound with HD (High Definition) video quality. Save videos in their original quality.
+                    Experience the best image and sound with HD (High Definition) video quality. Save videos in their original quality. We prioritize high-resolution downloads to ensure a superb viewing experience.
                 </p>
             </div>
 
             <div>
-                <h3>MP3 Support</h3>
+                <h3>MP3 Support (Ses İndirme)</h3>
                 <p>
-                    Do you only want to download the music from the video? With Tiks Save, you can also download videos directly in MP3 format.
+                    Do you only want to download the music from the video? With Tiks Save, you can also download videos directly in MP3 format, making it easy to save your favorite TikTok sounds and music tracks.
                 </p>
             </div>
         </div>
     </div>
     
     <div class="container">
-        <h2 class="section-title" id="how-to-use">How to Use</h2>
+        <h2 class="section-title" id="how-to-use">Tiks Save Nasıl Kullanılır? (Adım Adım Kılavuz)</h2>
         <ol class="how-to-use-list">
             <li>
-                <strong>Open the TikTok app</strong> and find the video you want to download.
+                <strong>Open the TikTok app or website</strong> and find the video you want to download.
             </li>
             <li>
-                Tap the <strong>"Share"</strong> icon on the video and select <strong>"Copy Link"</strong>.
+                Tap the <strong>"Share"</strong> icon on the video and select <strong>"Copy Link"</strong> (or 'Share Link').
             </li>
             <li>
                 Return to Tiks Save and <strong>paste</strong> the copied link into the input box above.
             </li>
             <li>
-                Click the <strong>"Download"</strong> button and choose your preferred format (MP4 or MP3) to complete the download.
+                Click the <strong>"Download"</strong> button. The video preview and available formats will appear in seconds.
+            </li>
+             <li>
+                Choose your preferred format (MP4/HD Video or MP3 Audio) to complete the download. It's fast, free, and secure.
             </li>
         </ol>
     </div>
 
 
     <div class="discord-section">
-        <h2>Tiks Save Bot</h2>
+        <h2>Tiks Save Bot (Discord Sunucun İçin)</h2>
         <p>
             Want to download TikTok videos directly on your Discord server?
             Add the Tiks Save Bot to your server to easily download videos and MP3s without watermarks.
@@ -772,7 +804,8 @@
 
     <svg xmlns="http://www.w3.org/2000/svg" class="discord-icon" viewBox="0 0 256 199" fill="currentColor">
 
-      <path d="M216.856 16.597C198.36 8.298 179.215 3.068 159.877 0c-2.07 3.639-4.38 8.385-6.014 12.252-17.48-2.633-34.793-2.633-51.772 0-1.635-3.867-4.065-8.613-6.135-12.252-19.338 3.068-38.483 8.298-56.979 16.597C5.818 58.707-3.884 99.622.785 140.043c22.56 16.597 44.476 26.61 66.148 33.93 5.414-7.525 10.197-15.504 14.34-23.905-7.867-2.987-15.379-6.794-22.319-11.511 1.87-1.398 3.74-2.916 5.609-4.314 42.547 19.339 88.897 19.339 131.324 0 1.87 1.398 3.739 2.916 5.609 4.314-6.94 4.837-14.452 8.524-22.319 11.511 4.143 8.401 8.926 16.38 14.22 23.905 21.672-7.32 43.589-17.333 66.149-33.93 5.115-47.232-8.922-87.58-38.606-123.446l-.001-.001ZM85.207 124.838c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Zm85.586 0c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Z"/>
+      <path d="M216.856 16.597C198.36 8.298 179.215 3.068 159.877 0c-2.07 3.639-4.38 8.385-6.014 12.252-17.48-2.633-34.793-2.633-51.772 0-1.635-3.867-4.065-8.613-6.135-12.252-19.338 3.068-38.483 8.298-56.979 16.597C5.818 58.707-3.884 99.622.785 140.043c22.56 16.597 44.476 26.61 66.148 33.93 5.414-7.525 10.197-15.504 14.34-23.905-7.867-2.987-15.379-6.794-22.319-11.511 1.87-1.398 3.74-2.916 5.609-4.314 42.547 19.339 88.897 19.339 131.324 0 1.87 1.398 3.739 2.916 5.609 4.314-6.94 4.837-14.452 8.524-22.319 11.511 4.143 8.401 8.926 16.38 14.22 23.905 21.672-7.32 43.589-17.333 66.149-33.93 5.115-47.232-8.922-87.58-38.606-123.446l-.001-.001ZM85.207 124.838c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Zm85.586 0c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 
+ 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Z"/>
 
     </svg>
 
@@ -782,14 +815,14 @@
     </div>
 
     <section class="faq-section container" id="faq-section">
-        <h2 class="section-title">Frequently Asked Questions</h2>
+        <h2 class="section-title">Frequently Asked Questions (Sıkça Sorulan Sorular)</h2>
         <div class="accordion">
             <div class="accordion-header">
                 How do I find the TikTok video link?
                 <span class="accordion-toggle-icon">&#9660;</span>
             </div>
             <div class="accordion-content">
-                <p>Open the TikTok app or website, tap “Share” on the video, then select “Copy Link” to get the video URL.</p>
+                <p>Open the TikTok app or website, tap “Share” on the video, then select “Copy Link” to get the video URL. Ensure the link is complete for our system to process it correctly.</p>
             </div>
         </div>
         <div class="accordion">
@@ -798,7 +831,7 @@
                 <span class="accordion-toggle-icon">&#9660;</span>
             </div>
             <div class="accordion-content">
-                <p>Yes, Tiks Save is a completely free service. You can download as many videos as you like without any charges.</p>
+                <p>Yes, Tiks Save is a completely free service. You can download as many videos as you like without any charges or hidden fees. We rely on ads to keep the service running.</p>
             </div>
         </div>
         <div class="accordion">
@@ -807,7 +840,7 @@
                 <span class="accordion-toggle-icon">&#9660;</span>
             </div>
             <div class="accordion-content">
-                <p>Your downloaded files are usually saved in your device's default "Downloads" folder or video gallery.</p>
+                <p>Your downloaded files are usually saved in your device's default "Downloads" folder or video gallery. On mobile devices, check your gallery or the 'Files' app. The exact location depends on your browser and operating system settings.</p>
             </div>
         </div>
         <div class="accordion">
@@ -816,13 +849,23 @@
                 <span class="accordion-toggle-icon">&#9660;</span>
             </div>
             <div class="accordion-content">
-                <p>After you paste your link and click "Download," you will be presented with options to download the HD video, SD video, or MP3 (audio only), if available.</p>
+                <p>After you paste your link and click "Download," you will be presented with options to download the **HD video** (highest quality), **SD video** (normal quality), or **MP3** (audio only), if available. Simply click the button for your desired format.</p>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header">
+                Why am I not getting the "No Watermark" version?
+                <span class="accordion-toggle-icon">&#9660;</span>
+            </div>
+            <div class="accordion-content">
+                <p>Tiks Save works hard to provide filigransız versions. If you encounter a video with a watermark, please ensure you have the original, sharable TikTok link. Very old or restricted videos may sometimes have issues, but this is rare. You can try pasting the link again.</p>
             </div>
         </div>
     </section>
 
     <footer class="container">
-        <p>&copy; 2025 Tiks Save. All rights reserved. | <a href="#">Terms of Service</a> | <a href="#">Privacy Policy</a></p>
+        <p>&copy; 2025 Tiks Save. All rights reserved. | <a href="#">Terms of Service</a> |
+            <a href="#">Privacy Policy</a></p>
     </footer>
 
     <script>
@@ -836,9 +879,17 @@
         const previewContainer = document.getElementById('preview-container');
         const previewThumbnail = document.getElementById('preview-thumbnail');
         const previewTitle = document.getElementById('preview-title');
+        const videoPlayerContainer = document.getElementById('video-player-container'); // Yeni eklenen
         const optionsContainer = document.getElementById('options');
+        const messageContainer = document.getElementById('message-container'); // Yeni eklenen
         const accordionHeaders = document.querySelectorAll('.accordion-header');
         let isFetching = false;
+        
+        // Helper function for messages
+        function showMessage(msg, isError = true) {
+            messageContainer.textContent = msg;
+            messageContainer.style.color = isError ? '#ff5252' : 'var(--primary-color)';
+        }
 
         // Scroll effect for navbar
         window.addEventListener('scroll', () => {
@@ -854,14 +905,13 @@
             menuToggle.classList.toggle('active');
             menuPanel.classList.toggle('open');
         });
-
         document.addEventListener('click', (e) => {
             if (!menuToggle.contains(e.target) && !menuPanel.contains(e.target)) {
                 menuToggle.classList.remove('active');
                 menuPanel.classList.remove('open');
             }
         });
-
+        
         // Input and button logic
         videoUrlInput.addEventListener('input', () => {
             if (videoUrlInput.value.trim() !== '') {
@@ -870,12 +920,14 @@
             } else {
                 pasteBtn.style.display = 'inline-block';
                 clearBtn.style.display = 'none';
+                // Boşken gizle
                 previewContainer.classList.remove('show');
                 previewContainer.style.display = 'none';
                 optionsContainer.style.display = 'none';
+                messageContainer.textContent = ''; // Mesajı temizle
             }
         });
-
+        
         clearBtn.addEventListener('click', () => {
             videoUrlInput.value = '';
             pasteBtn.style.display = 'inline-block';
@@ -883,8 +935,9 @@
             previewContainer.classList.remove('show');
             previewContainer.style.display = 'none';
             optionsContainer.style.display = 'none';
+            messageContainer.textContent = '';
         });
-
+        
         pasteBtn.addEventListener('click', async () => {
             try {
                 const text = await navigator.clipboard.readText();
@@ -894,112 +947,141 @@
                 alert("Paste failed. Please paste manually.");
             }
         });
+        
+        mainForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (isFetching) return;
 
-       mainForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (isFetching) return;
+            const url = videoUrlInput.value.trim();
+            if (!url) {
+                showMessage("Please enter a valid video URL.");
+                return;
+            }
 
-    const url = videoUrlInput.value.trim();
-    if (!url) {
-        showMessage("Please enter a valid video URL.");
-        return;
-    }
-
-    isFetching = true;
-    const fetchBtn = document.querySelector('.fetch-btn');
-    fetchBtn.textContent = 'Fetching...';
-    fetchBtn.disabled = true;
-
-    let apiEndpoint = '';
-    // Check which platform the entered URL belongs to.
-    if (url.includes('tiktok.com')) {
-        apiEndpoint = '/api/tiktok-process';
-    } else if (url.includes('instagram.com')) {
-        apiEndpoint = '/api/get-media';
-    } else {
-        showMessage("Invalid URL. Please enter a TikTok or Instagram link.");
-        isFetching = false;
-        fetchBtn.textContent = 'Download';
-        fetchBtn.disabled = false;
-        return;
-    }
-
-    try {
-        const res = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url })
-        });
-
-        const data = await res.json();
-
-        if (!data.success) {
-            showMessage(data.message || "Failed to fetch download links. Please make sure the link is correct.");
+            isFetching = true;
+            showMessage('Fetching download links...', false); // Yükleniyor mesajı
+            const fetchBtn = document.querySelector('.fetch-btn');
+            fetchBtn.textContent = 'Fetching...';
+            fetchBtn.disabled = true;
+            
+            // Önizleme ve seçenekleri temizle/gizle
             previewContainer.classList.remove('show');
-            return;
-        }
+            previewContainer.style.display = 'none';
+            optionsContainer.style.display = 'none';
 
-        previewContainer.classList.add('show');
-        previewTitle.textContent = data.desc || data.media_info?.caption || 'Untitled Video';
-        videoPlayerContainer.innerHTML = '';
-        optionsContainer.innerHTML = '';
 
-        let downloadButtonsHtml = '';
-
-        // Process TikTok video
-        if (data.hdplay || data.play) {
-            const videoElement = document.createElement('video');
-            videoElement.setAttribute('controls', '');
-            videoElement.setAttribute('preload', 'metadata');
-            videoElement.setAttribute('poster', data.cover || '');
-            videoElement.className = 'w-full max-w-xl rounded-2xl';
-            videoElement.innerHTML = `<source src="${data.hdplay || data.play}" type="video/mp4">`;
-            videoPlayerContainer.appendChild(videoElement);
-            if (data.hdplay) {
-                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=hdplay">📽️ HD Video</a>`;
-            }
-            if (data.play) {
-                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=play">📽️ SD Video</a>`;
-            }
-            if (data.music) {
-                downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=music">🎵 MP3 (Audio)</a>`;
-            }
-        }
-        // Process Instagram video/image
-        else if (data.media_url) {
-            const mediaUrl = data.media_url;
-            const mediaType = data.is_video ? 'video' : 'image';
-            const mediaElement = document.createElement(mediaType);
-            mediaElement.setAttribute('controls', data.is_video ? '' : null);
-            mediaElement.setAttribute('poster', data.thumbnail_url || '');
-            mediaElement.className = 'w-full max-w-xl rounded-2xl';
-            if (data.is_video) {
-                mediaElement.innerHTML = `<source src="${mediaUrl}" type="video/mp4">`;
+            let apiEndpoint = '';
+            // Check which platform the entered URL belongs to.
+            if (url.includes('tiktok.com')) {
+                apiEndpoint = '/api/tiktok-process';
+            } else if (url.includes('instagram.com')) {
+                apiEndpoint = '/api/get-media';
             } else {
-                mediaElement.src = mediaUrl;
+                showMessage("Invalid URL. Please enter a TikTok or Instagram link.");
+                isFetching = false;
+                fetchBtn.textContent = 'Download';
+                fetchBtn.disabled = false;
+                return;
             }
-            videoPlayerContainer.appendChild(mediaElement);
 
-            downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(mediaUrl)}&username=${encodeURIComponent(data.username)}&type=${mediaType}">Download ${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}</a>`;
+            try {
+                const res = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                
+                messageContainer.textContent = ''; // Başarılıysa mesajı temizle
 
-        } else {
-            showMessage("No video or image found for this URL.");
-            previewContainer.classList.remove('show');
-        }
+                if (!data.success) {
+                    showMessage(data.message || "Failed to fetch download links. Please make sure the link is correct.");
+                    previewContainer.classList.remove('show');
+                    return;
+                }
 
-        optionsContainer.innerHTML = downloadButtonsHtml;
+                // Başarılı sonuçları göster
+                previewContainer.style.display = 'flex';
+                // setTimeout, CSS transition'ların çalışması için gerekli
+                setTimeout(() => previewContainer.classList.add('show'), 10);
+                optionsContainer.style.display = 'flex';
+                
+                previewTitle.textContent = data.desc || data.media_info?.caption || 'Untitled Video';
+                
+                // Önizleme resmi
+                previewThumbnail.src = data.cover || data.thumbnail_url || '';
+                
+                // Video oynatıcıyı doldur
+                videoPlayerContainer.innerHTML = '';
+                optionsContainer.innerHTML = '';
 
-    } catch (err) {
-        showMessage("An error occurred while fetching download links.");
-        console.error(err);
-        previewContainer.classList.remove('show');
-    } finally {
-        isFetching = false;
-        fetchBtn.textContent = 'Download';
-        fetchBtn.disabled = false;
-    }
-});
+                let downloadButtonsHtml = '';
+                
+                // Process TikTok video
+                if (data.hdplay || data.play) {
+                    const videoElement = document.createElement('video');
+                    videoElement.setAttribute('controls', '');
+                    videoElement.setAttribute('preload', 'metadata');
+                    videoElement.setAttribute('poster', data.cover || '');
+                    videoElement.style.width = '100%';
+                    videoElement.style.maxWidth = '600px';
+                    videoElement.style.borderRadius = '16px';
+                    videoElement.style.marginTop = '15px';
+                    videoElement.innerHTML = `<source src="${data.hdplay || data.play}" type="video/mp4">`;
+                    videoPlayerContainer.appendChild(videoElement);
+                    
+                    if (data.hdplay) {
+                        downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=hdplay">📽️ HD Video (High Quality)</a>`;
+                    }
+                    if (data.play) {
+                        downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=play">📽️ SD Video (Normal Quality)</a>`;
+                    }
+                    if (data.music) {
+                        downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?shortId=${data.shortId}&username=${encodeURIComponent(data.username)}&type=music">🎵 MP3 (Audio Only)</a>`;
+                    }
+                }
+                // Process Instagram video/image
+                else if (data.media_url) {
+                    const mediaUrl = data.media_url;
+                    const mediaType = data.is_video ? 'video' : 'image';
+                    const mediaElement = document.createElement(data.is_video ? 'video' : 'img');
+                    
+                    if(data.is_video) {
+                        mediaElement.setAttribute('controls', '');
+                        mediaElement.setAttribute('preload', 'metadata');
+                        mediaElement.setAttribute('poster', data.thumbnail_url || '');
+                        mediaElement.innerHTML = `<source src="${mediaUrl}" type="video/mp4">`;
+                    } else {
+                        mediaElement.src = mediaUrl;
+                    }
+                    
+                    mediaElement.style.width = '100%';
+                    mediaElement.style.maxWidth = '600px';
+                    mediaElement.style.borderRadius = '16px';
+                    mediaElement.style.marginTop = '15px';
 
+                    videoPlayerContainer.appendChild(mediaElement);
+                    downloadButtonsHtml += `<a class="download-btn" href="/proxy-download?url=${encodeURIComponent(mediaUrl)}&username=${encodeURIComponent(data.username)}&type=${mediaType}">Download ${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}</a>`;
+
+                } else {
+                    showMessage("No downloadable media found for this URL.");
+                    previewContainer.classList.remove('show');
+                    optionsContainer.style.display = 'none';
+                }
+
+                optionsContainer.innerHTML = downloadButtonsHtml;
+            } catch (err) {
+                showMessage("An unexpected error occurred while fetching download links.");
+                console.error(err);
+                previewContainer.classList.remove('show');
+                optionsContainer.style.display = 'none';
+            } finally {
+                isFetching = false;
+                fetchBtn.textContent = 'Download';
+                fetchBtn.disabled = false;
+            }
+        });
+        
         // Accordion functionality
         accordionHeaders.forEach(header => {
             header.addEventListener('click', () => {
