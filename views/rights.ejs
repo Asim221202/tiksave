@@ -3,12 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Rights & Copyright - Tikssave</title>
+  <title>User Rights & Copyright - Tiks Save</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
   <style>
+    /* Ana sayfadan alınan CSS değişkenleri */
+    :root {
+        --primary-color: #8c86fc;
+        --secondary-color: #5865F2;
+        --background-dark: #12121e;
+        --background-light: #1a1a2b;
+        --text-color: #f0f6ff;
+        --text-secondary: #c9d6ef;
+        --card-bg: #1f1f33;
+    }
+    
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #1e1e1e;
-      color: #e5e5e5;
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--background-dark);
+      color: var(--text-color);
       margin: 0;
       padding: 20px;
       line-height: 1.7;
@@ -16,30 +32,41 @@
     .container {
       max-width: 900px;
       margin: auto;
+      padding-bottom: 60px;
     }
     h1 {
       text-align: center;
       font-size: 2.6rem;
-      color: #60a5fa;
+      color: var(--primary-color); /* Ana renk */
+      font-weight: 800;
       margin-bottom: 30px;
     }
     h2 {
       font-size: 1.5rem;
-      color: #93c5fd;
+      color: var(--text-color); /* Metin rengi, h1'den daha az vurgulu */
       margin-top: 40px;
+      border-left: 5px solid var(--primary-color); /* Ana sayfa öğelerine benzer bir vurgu */
+      padding-left: 15px;
+      margin-bottom: 20px;
+      font-weight: 700;
     }
     p {
       margin-top: 15px;
+      color: var(--text-secondary); /* Okunabilirliği artırmak için ikincil metin rengi */
     }
     ul {
       padding-left: 20px;
+      margin-top: 15px;
+      list-style: disc;
     }
     li {
       margin-bottom: 10px;
+      color: var(--text-secondary);
     }
     a {
-      color: #3b82f6;
+      color: var(--primary-color);
       text-decoration: none;
+      transition: color 0.2s ease;
     }
     a:hover {
       text-decoration: underline;
@@ -48,7 +75,16 @@
       margin-top: 50px;
       text-align: center;
       font-size: 0.9rem;
-      color: #777;
+      color: #666; /* Daha koyu footer metni */
+    }
+
+    @media (max-width: 600px) {
+        h1 {
+            font-size: 2rem;
+        }
+        h2 {
+            font-size: 1.3rem;
+        }
     }
   </style>
 </head>
@@ -59,7 +95,7 @@
     <p>This page outlines your rights when using Tikssave.com, and our position regarding content ownership and copyrights.</p>
 
     <h2>1. User Rights</h2>
-    <p>As a user of Tikssave, you have the right to:</p>
+    <p>As a user of Tiks Save, you have the right to:</p>
     <ul>
       <li>Access TikTok video links publicly available on the platform.</li>
       <li>Use the download links for personal, non-commercial purposes.</li>
@@ -68,22 +104,21 @@
     </ul>
 
     <h2>2. Content Ownership</h2>
-    <p>Tikssave does not own or host any of the TikTok content shown or processed through the website. All rights to the videos, images, sounds, and associated content belong to their respective creators and copyright holders.</p>
+    <p>Tiks Save does not own or host any of the TikTok content shown or processed through the website. All rights to the videos, images, sounds, and associated content belong to their respective creators and copyright holders.</p>
 
     <h2>3. Fair Use Notice</h2>
-    <p>Tikssave is designed for fair use. Users should not distribute downloaded content for commercial gain or in ways that violate the original creator’s rights. This platform is intended to help individuals save videos for personal use, such as offline viewing or private sharing.</p>
+    <p>Tiks Save is designed for fair use. Users should not distribute downloaded content for commercial gain or in ways that violate the original creator’s rights. This platform is intended to help individuals save videos for personal use, such as offline viewing or private sharing.</p>
 
     <h2>4. DMCA & Copyright Complaints</h2>
-    <p>If you are a copyright holder and believe your rights have been infringed by content accessible through Tikssave, please contact us at <a href="mailto:support@tikssave.com">support@tikssave.com</a>. We will respond to all legitimate requests promptly and take appropriate action, including content removal if needed.</p>
+    <p>If you are a copyright holder and believe your rights have been infringed by content accessible through Tiks Save, please contact us at <a href="mailto:support@tikssave.com">support@tikssave.com</a>. We will respond to all legitimate requests promptly and take appropriate action, including content removal if needed.</p>
 
     <h2>5. No Hosting Guarantee</h2>
-    <p>Tikssave does not permanently store or serve any video content. All media is accessed and transmitted through third-party services. We do not claim any ownership or licensing of the content retrieved.</p>
+    <p>Tiks Save does not permanently store or serve any video content. All media is accessed and transmitted through third-party services. We do not claim any ownership or licensing of the content retrieved.</p>
 
     <footer>
-      &copy; 2025 Tikssave.com — All rights reserved. |
+      &copy; 2025 Tikssave.xyz — All rights reserved. |
       <a href="/terms">Terms</a> |
-      <a href="/privacy">Privacy</a> |
-      <a href="/contact">Contact</a>
+      <a href="/privacy">Privacy</a>
     </footer>
   </div>
 </body>
