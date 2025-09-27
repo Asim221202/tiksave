@@ -194,11 +194,11 @@
         .form-container {
             width: 100%;
             max-width: 600px;
-            margin: 0 auto 10px; /* Azaltıldı */
+            margin: 0 auto 10px; /* Reduced */
             padding: 0 20px;
         }
         
-        #message-container { /* Yeni eklendi */
+        #message-container { /* Added */
             text-align: center;
             color: #ff5252;
             font-weight: 600;
@@ -324,7 +324,7 @@
             text-align: center;
         }
         
-        #video-player-container { /* Yeni eklendi */
+        #video-player-container { /* Added */
             width: 100%;
             max-width: 600px;
         }
@@ -685,12 +685,11 @@
         </form>
     </div>
     
-      <div id="message-container">
+    <div id="message-container">
         <% if (typeof message !== 'undefined' && message) { %>
             <p><%= message %></p>
         <% } %>
     </div>
-
     
     <% if (videoData) { %>
         <div id="preview-container" class="show" style="display: flex;">
@@ -747,25 +746,25 @@
     </main>
 
     <div class="container">
-        <h2 class="section-title" id="features">Tiks Save'in Öne Çıkan Özellikleri</h2>
+        <h2 class="section-title" id="features">Key Features of Tiks Save</h2>
         
         <div class="features-text-only">
             <div>
-                <h3>No Watermarks (Filigransız)</h3>
+                <h3>No Watermarks</h3>
                 <p>
                     Download videos without watermarks. This allows you to use the video cleanly and professionally anywhere you want. Tiks Save ensures the highest possible quality for your watermark-free downloads.
                 </p>
             </div>
             
             <div>
-                <h3>High Quality (Yüksek Kalite)</h3>
+                <h3>High Quality</h3>
                 <p>
                     Experience the best image and sound with HD (High Definition) video quality. Save videos in their original quality. We prioritize high-resolution downloads to ensure a superb viewing experience.
                 </p>
             </div>
 
             <div>
-                <h3>MP3 Support (Ses İndirme)</h3>
+                <h3>MP3 Support</h3>
                 <p>
                     Do you only want to download the music from the video? With Tiks Save, you can also download videos directly in MP3 format, making it easy to save your favorite TikTok sounds and music tracks.
                 </p>
@@ -774,7 +773,7 @@
     </div>
     
     <div class="container">
-        <h2 class="section-title" id="how-to-use">Tiks Save Nasıl Kullanılır? (Adım Adım Kılavuz)</h2>
+        <h2 class="section-title" id="how-to-use">How to Use Tiks Save (Step-by-Step Guide)</h2>
         <ol class="how-to-use-list">
             <li>
                 <strong>Open the TikTok app or website</strong> and find the video you want to download.
@@ -796,7 +795,7 @@
 
 
     <div class="discord-section">
-        <h2>Tiks Save Bot (Discord Sunucun İçin)</h2>
+        <h2>Tiks Save Bot (For Your Discord Server)</h2>
         <p>
             Want to download TikTok videos directly on your Discord server?
             Add the Tiks Save Bot to your server to easily download videos and MP3s without watermarks.
@@ -816,7 +815,7 @@
     </div>
 
     <section class="faq-section container" id="faq-section">
-        <h2 class="section-title">Frequently Asked Questions (Sıkça Sorulan Sorular)</h2>
+        <h2 class="section-title">Frequently Asked Questions</h2>
         <div class="accordion">
             <div class="accordion-header">
                 How do I find the TikTok video link?
@@ -859,7 +858,7 @@
                 <span class="accordion-toggle-icon">&#9660;</span>
             </div>
             <div class="accordion-content">
-                <p>Tiks Save works hard to provide filigransız versions. If you encounter a video with a watermark, please ensure you have the original, sharable TikTok link. Very old or restricted videos may sometimes have issues, but this is rare. You can try pasting the link again.</p>
+                <p>Tiks Save works hard to provide watermark-free versions. If you encounter a video with a watermark, please ensure you have the original, sharable TikTok link. Very old or restricted videos may sometimes have issues, but this is rare. You can try pasting the link again.</p>
             </div>
         </div>
     </section>
@@ -880,9 +879,9 @@
         const previewContainer = document.getElementById('preview-container');
         const previewThumbnail = document.getElementById('preview-thumbnail');
         const previewTitle = document.getElementById('preview-title');
-        const videoPlayerContainer = document.getElementById('video-player-container'); // Yeni eklenen
+        const videoPlayerContainer = document.getElementById('video-player-container');
         const optionsContainer = document.getElementById('options');
-        const messageContainer = document.getElementById('message-container'); // Yeni eklenen
+        const messageContainer = document.getElementById('message-container');
         const accordionHeaders = document.querySelectorAll('.accordion-header');
         let isFetching = false;
         
@@ -921,11 +920,11 @@
             } else {
                 pasteBtn.style.display = 'inline-block';
                 clearBtn.style.display = 'none';
-                // Boşken gizle
+                // Hide when empty
                 previewContainer.classList.remove('show');
                 previewContainer.style.display = 'none';
                 optionsContainer.style.display = 'none';
-                messageContainer.textContent = ''; // Mesajı temizle
+                messageContainer.textContent = ''; // Clear message
             }
         });
         
@@ -960,12 +959,12 @@
             }
 
             isFetching = true;
-            showMessage('Fetching download links...', false); // Yükleniyor mesajı
+            showMessage('Fetching download links...', false); // Loading message
             const fetchBtn = document.querySelector('.fetch-btn');
             fetchBtn.textContent = 'Fetching...';
             fetchBtn.disabled = true;
             
-            // Önizleme ve seçenekleri temizle/gizle
+            // Clear/hide preview and options
             previewContainer.classList.remove('show');
             previewContainer.style.display = 'none';
             optionsContainer.style.display = 'none';
@@ -993,7 +992,7 @@
                 });
                 const data = await res.json();
                 
-                messageContainer.textContent = ''; // Başarılıysa mesajı temizle
+                messageContainer.textContent = ''; // Clear message on success
 
                 if (!data.success) {
                     showMessage(data.message || "Failed to fetch download links. Please make sure the link is correct.");
@@ -1001,18 +1000,18 @@
                     return;
                 }
 
-                // Başarılı sonuçları göster
+                // Show successful results
                 previewContainer.style.display = 'flex';
-                // setTimeout, CSS transition'ların çalışması için gerekli
+                // setTimeout is needed for CSS transitions to work
                 setTimeout(() => previewContainer.classList.add('show'), 10);
                 optionsContainer.style.display = 'flex';
                 
                 previewTitle.textContent = data.desc || data.media_info?.caption || 'Untitled Video';
                 
-                // Önizleme resmi
+                // Preview image
                 previewThumbnail.src = data.cover || data.thumbnail_url || '';
                 
-                // Video oynatıcıyı doldur
+                // Populate video player
                 videoPlayerContainer.innerHTML = '';
                 optionsContainer.innerHTML = '';
 
