@@ -11,7 +11,7 @@ const VideoLink = require('./models/VideoLink');
 const { customAlphabet } = require('nanoid');
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 7);
 const axios = require('axios');
-const Redis = require('ioredis');
+const Redis = require('ioredis'); // YENİ: Redis kütüphanesi
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -32,10 +32,11 @@ const TIKTOK_PROXIES = [
     process.env.PROXY1_URL,
     process.env.PROXY2_URL,
     process.env.PROXY3_URL,
-    process.env.PROXY4_URL,
+    process.env.PROXY4_URL
+    
 ];
 
-// Python API'nin URL'si
+// Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
 const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
 // Rastgele proxy seç
@@ -48,14 +49,9 @@ function getRandomProxy(proxies) {
 // --- TikTok Proxy İşlemcisi ---
 async function fetchTikTokVideoFromProxy(url) {
     const tried = new Set();
-    const availableProxies = TIKTOK_PROXIES.filter(p => p); // Boş PROXY URL'lerini filtrele
-    if (availableProxies.length === 0) {
-         throw new Error("Kullanılabilir TikTok proxy'si yok.");
-    }
-    
-    for (let i = 0; i < availableProxies.length * 2; i++) { // En fazla 2 deneme
-        const proxy = getRandomProxy(availableProxies);
-        if (tried.has(proxy) && tried.size === availableProxies.length) continue;
+    for (let i = 0; i < TIKTOK_PROXIES.length; i++) {
+        const proxy = getRandomProxy(TIKTOK_PROXIES);
+        if (tried.has(proxy)) continue;
         tried.add(proxy);
         try {
             const response = await axios.post(proxy, { url }, { timeout: 10000 });
@@ -133,7 +129,7 @@ app.get('/dashboard', (req, res) => {
 
 // --- API ROTLARI ---
 
-// TikTok
+// TikTok - GÜNCELLENMİŞ ROTA
 app.post('/api/tiktok-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
@@ -141,26 +137,13 @@ app.post('/api/tiktok-process', async (req, res) => {
         const videoInfo = await fetchTikTokVideoFromProxy(url);
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
-        
-        // TikTok verisi doğrudan videoInfo alanına kaydediliyor (media dizisi yerine)
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
 
-        // Veriyi Redis'e kaydet (7 günlük TTL)
-        await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); 
+        // YENİ: Veriyi Redis'e kaydet
+        await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); // 7 günlük TTL
 
-        // Client-side'a TikTok'a özgü veriyi gönder
-        res.json({ 
-            success: true, 
-            shortId,
-            desc: videoInfo.desc,
-            cover: videoInfo.cover,
-            play: videoInfo.play,
-            hdplay: videoInfo.hdplay,
-            music: videoInfo.music,
-            username: videoInfo.author?.unique_id || 'tiktok'
-        });
-        
+        res.json({ success: true, shortId, videoInfo });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Tüm proxyler başarısız oldu veya limit aşıldı.' });
     }
@@ -177,7 +160,7 @@ app.post('/api/instagram-process', async (req, res) => {
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: { type: 'instagram' } });
         await newVideoLink.save();
         
-        res.json({ success: true, shortId, message: "Instagram için link oluşturuldu." });
+        res.json({ success: true, shortId });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Instagram işlemi başarısız oldu.' });
     }
@@ -215,97 +198,42 @@ app.get('/api/info/:shortId', async (req, res) => {
     }
 });
 
-// GÜNCELLENMİŞ PROXY DOWNLOAD ROTA
+// Proxy download
 app.get('/proxy-download', async (req, res) => {
-    // shortId: TikTok için kullanılır (DB'den URL çeker)
-    const { shortId, type, username, url: directUrl, mediaIndex = 0 } = req.query; 
-
+    const { shortId, type, username, mediaIndex = 0 } = req.query;
     try {
-        let videoInfo;
-        let videoUrl;
-        let originalUrl = directUrl;
+        const videoLink = await VideoLink.findOne({ shortId });
+        if (!videoLink || !videoLink.videoInfo) return res.status(404).send('Video bulunamadı');
 
-        if (shortId) {
-            // Case 1: TikTok (shortId ile)
-            const videoLink = await VideoLink.findOne({ shortId });
-            if (!videoLink) return res.status(404).send('Video verisi bulunamadı (shortId).');
-
-            videoInfo = videoLink.videoInfo;
-            originalUrl = videoLink.originalUrl;
-            
-            // İstenen türe göre doğru URL'yi seç
-            if (type === 'hdplay') {
-                videoUrl = videoInfo.hdplay;
-            } else if (type === 'play') {
-                videoUrl = videoInfo.play;
-            } else if (type === 'music') {
-                videoUrl = videoInfo.music;
-            } else if (type === 'video' && (videoInfo.hdplay || videoInfo.play)) {
-                videoUrl = videoInfo.hdplay || videoInfo.play;
-            }
-            
-        } else if (directUrl) {
-            // Case 2: Diğer platformlar (direkt URL ile)
-            videoUrl = directUrl;
-            
-        } else {
-            return res.status(400).send('İndirme bilgisi eksik (shortId veya url).');
-        }
-
-        if (!videoUrl) return res.status(404).send('İstenen tür için indirme linki bulunamadı.');
-
-        // Dosya uzantısını ve MIME tipini belirle
-        let extension = 'mp4';
-        let contentType = 'video/mp4';
+        const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
         
-        if (type === 'music') {
-            extension = 'mp3';
-            contentType = 'audio/mpeg';
-        } else if (type === 'image') {
-            extension = 'jpg';
-            contentType = 'image/jpeg';
-        } else if (videoUrl.includes('.jpg') || videoUrl.includes('.jpeg')) {
-            extension = 'jpg';
-            contentType = 'image/jpeg';
-        } else if (videoUrl.includes('.gif')) {
-            extension = 'gif';
-            contentType = 'image/gif';
-        } else if (videoUrl.includes('.mp3')) {
-            extension = 'mp3';
-            contentType = 'audio/mpeg';
+        let videoUrl;
+        if (type === 'video') {
+            videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
+            if (!videoUrl || !videoUrl.endsWith('.mp4')) {
+                videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
+            }
+        } else {
+            videoUrl = mediaInfo.media_url || mediaInfo.cover;
         }
 
+        if (!videoUrl) return res.status(404).send('Video link bulunamadı');
 
-        // --- Dosya Adlandırma & Streaming ---
-        const safeUsername = sanitize((username || 'tikssave').replace(/[\s\W]+/g, '_')).substring(0, 30);
+        const extension = type === 'video' ? 'mp4' : 'jpg';
+        const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
-        const videoRes = await axios.get(videoUrl, { 
-            responseType: 'stream', 
-            headers: { 
-                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-                'Referer': originalUrl || 'https://www.tiktok.com/'
-            },
-            timeout: 15000 // 15 saniye timeout
-        });
-        
+        const videoRes = await axios.get(videoUrl, { responseType: 'stream', headers: { 'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0' } });
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', contentType);
-        
-        if (videoRes.headers['content-length']) {
-            res.setHeader('Content-Length', videoRes.headers['content-length']);
-        }
-        
+        res.setHeader('Content-Type', 'application/octet-stream');
         videoRes.data.pipe(res);
 
     } catch (err) {
-        console.error('Proxy download error:', err.message);
-        res.status(500).send('Download error: Failed to stream the file.');
+        res.status(500).send('Download error');
     }
 });
 
-
-// ShortId yönlendirme - MP4 KONTROLÜ İLE GÜNCELLENMİŞ ROTA
+// ShortId yönlendirme - GÜNCELLENMİŞ ROTA
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
@@ -327,33 +255,20 @@ app.get('/:shortId', async (req, res) => {
 
         let videoData = videoLink.videoInfo;
 
-        // YENİ: Redis'ten veri çek ve MP4 linki yoksa yeniden çek
+        // YENİ: Önce Redis'ten veriyi çekmeyi dene
         if (isTikTok) {
             const cachedVideoInfo = await redis.get(`tiktok:${shortId}`);
-            let needsRefetch = false;
-            
             if (cachedVideoInfo) {
                 videoData = JSON.parse(cachedVideoInfo);
                 console.log(`Veri Redis'ten çekildi: ${shortId}`);
-
-                // Redis'ten gelen veride MP4 linki yoksa (bozuk cache), yeniden çek
-                if (!videoData.play && !videoData.hdplay) {
-                    console.log(`Redis'ten çekilen veride MP4 bulunamadı, API'den yeniden çekiliyor: ${shortId}`);
-                    needsRefetch = true;
-                }
-
             } else {
                 console.log(`Redis'te veri bulunamadı, API'den çekiliyor: ${shortId}`);
-                needsRefetch = true;
-            }
-
-            // API'den yeniden çekim gerekiyorsa (Redis'te yoksa veya bozuksa)
-            if (needsRefetch) {
+                // Eski kodun API'den veri çekme ve veritabanını güncelleme mantığı
                 const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
                 videoData = freshVideoInfo;
-                // Veritabanını ve Redis'i yeni veriyle güncelle
                 videoLink.videoInfo = freshVideoInfo;
                 await videoLink.save();
+                // YENİ: API'den çekilen veriyi Redis'e kaydet
                 await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(freshVideoInfo));
             }
         }
