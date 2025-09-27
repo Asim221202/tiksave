@@ -3,65 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Terms of Service - Tikssave</title>
+  <title>Terms of Service - Tiks Save</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
   <style>
+    /* Ana sayfadan alınan CSS değişkenleri */
+    :root {
+        --primary-color: #8c86fc;
+        --secondary-color: #5865F2;
+        --background-dark: #12121e;
+        --background-light: #1a1a2b;
+        --text-color: #f0f6ff;
+        --text-secondary: #c9d6ef;
+        --card-bg: #1f1f33;
+    }
+    
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #222;
-      color: #e0e0e0;
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--background-dark);
+      color: var(--text-color);
       margin: 0;
       padding: 20px;
       line-height: 1.7;
     }
     .container {
-      max-width: 850px;
+      max-width: 900px;
       margin: auto;
-      padding-bottom: 100px;
+      padding-bottom: 60px;
     }
     h1 {
-      font-size: 2.5rem;
-      color: #3b82f6;
-      margin-bottom: 30px;
       text-align: center;
+      font-size: 2.6rem;
+      color: var(--primary-color); /* Ana renk */
+      font-weight: 800;
+      margin-bottom: 30px;
     }
     h2 {
-      color: #60a5fa;
-      margin-top: 40px;
       font-size: 1.5rem;
+      color: var(--text-color); /* Metin rengi, h1'den daha az vurgulu */
+      margin-top: 40px;
+      border-left: 5px solid var(--primary-color); /* Ana sayfa öğelerine benzer bir vurgu */
+      padding-left: 15px;
+      margin-bottom: 20px;
+      font-weight: 700;
     }
     p {
       margin-top: 15px;
+      color: var(--text-secondary); /* Okunabilirliği artırmak için ikincil metin rengi */
     }
     ul {
-      padding-left: 25px;
+      padding-left: 20px;
+      margin-top: 15px;
+      list-style: disc;
     }
-    ul li {
+    li {
       margin-bottom: 10px;
-    }
-    footer {
-      max-width: 850px;
-      margin: 40px auto 20px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #777;
+      color: var(--text-secondary);
     }
     a {
-      color: #3b82f6;
+      color: var(--primary-color);
       text-decoration: none;
+      transition: color 0.2s ease;
     }
     a:hover {
       text-decoration: underline;
     }
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666; /* Daha koyu footer metni */
+    }
+
     @media (max-width: 600px) {
-      body {
-        padding: 15px;
-      }
-      h1 {
-        font-size: 2rem;
-      }
-      h2 {
-        font-size: 1.3rem;
-      }
+        h1 {
+            font-size: 2rem;
+        }
+        h2 {
+            font-size: 1.3rem;
+        }
     }
   </style>
 </head>
@@ -99,7 +122,7 @@
     <p>We may revise these Terms from time to time. Continued use of the site after updates indicates your acceptance of the new terms. Users are encouraged to revisit this page periodically.</p>
 
     <h2>8. Contact</h2>
-    <p>If you have any questions, feel free to contact us via email: <a href="mailto:support@tikssave.com">support@tikssave.com</a></p>
+    <p>If you have any questions, feel free to contact us via email: <a href="mailto:support@tikssave.xyz">support@tikssave.xyz</a></p>
 
     <footer>
       &copy; 2025 Tikssave.xyz — All rights reserved. |
