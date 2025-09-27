@@ -6,21 +6,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invite Tiks Save Bot – Discord</title>
-  <meta name="description" content="Add the Tiks Save Bot to your Discord server for instant, watermark-free video and MP3 downloads.">
+  <meta name="description" content="Add the Tiks Save Bot to your Discord server for instant, watermark-free video and MP3 downloads from TikTok, Instagram, and Twitter.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
   <style>
     :root {
-        --primary-color: #8c86fc;
-        --secondary-color: #5865F2;
-        --background-dark: #12121e;
-        --background-light: #1a1a2b;
+        --primary-color: #8c86fc; /* Bright Purple/Indigo */
+        --secondary-color: #5865F2; /* Discord Blue */
+        --background-dark: #12121e; /* Deep Dark Background */
+        --background-light: #1a1a2b; /* Navbar/Menu Background */
         --text-color: #f0f6ff;
         --text-secondary: #c9d6ef;
-        --card-bg: #1f1f33;
+        --card-bg: #1f1f33; /* Card/Section Background */
         --card-shadow: rgba(0, 0, 0, 0.4);
         --card-shadow-hover: rgba(140, 134, 252, 0.2);
     }
@@ -46,9 +48,10 @@
     .section-title {
         text-align: center;
         margin: 80px 0 40px;
-        font-size: 2.2rem;
-        font-weight: 700;
+        font-size: 2.5rem;
+        font-weight: 800;
         color: var(--primary-color);
+        text-shadow: 0 0 10px rgba(140, 134, 252, 0.3);
     }
 
     /* --- Navbar & Mobile Menu Styles --- */
@@ -70,32 +73,132 @@
     /* --- Page Specific Styles --- */
     .hero-section { text-align: center; padding: 60px 20px; background: linear-gradient(180deg, var(--background-light) 0%, var(--background-dark) 100%); border-radius: 20px; margin-top: 40px; border: 1px solid #2a2a3f; }
     .hero-section .discord-logo { width: 80px; height: 80px; margin-bottom: 20px; }
-    .hero-section h1 { font-size: 2.8rem; color: var(--text-color); margin-bottom: 15px; }
-    .hero-section p { font-size: 1.2rem; color: var(--text-secondary); max-width: 650px; margin: 0 auto 30px; }
-    .invite-btn { display: inline-flex; align-items: center; justify-content: center; background-color: var(--secondary-color); color: white; font-weight: 700; padding: 16px 30px; font-size: 1.25rem; border-radius: 12px; text-decoration: none; box-shadow: 0 6px 15px rgba(88, 101, 242, 0.4); transition: all 0.3s ease; }
-    .invite-btn:hover { background-color: #4752C4; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(88, 101, 242, 0.6); }
+    .hero-section h1 { font-size: 3rem; color: var(--text-color); margin-bottom: 15px; font-weight: 900;}
+    .hero-section p { font-size: 1.2rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto 30px; }
+
+    /* Button Group and Styles */
+    .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .invite-btn { 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        background-color: var(--secondary-color); 
+        color: white; 
+        font-weight: 700; 
+        padding: 16px 30px; 
+        font-size: 1.25rem; 
+        border-radius: 12px; 
+        text-decoration: none; 
+        box-shadow: 0 6px 15px rgba(88, 101, 242, 0.4); 
+        transition: all 0.3s ease; 
+    }
+    .invite-btn:hover { 
+        background-color: #4752C4; 
+        transform: translateY(-3px); 
+        box-shadow: 0 8px 20px rgba(88, 101, 242, 0.6); 
+    }
+    .secondary-btn { 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        background-color: var(--card-bg); /* Use card background for contrast */
+        color: var(--primary-color); 
+        border: 2px solid var(--primary-color);
+        font-weight: 700; 
+        padding: 16px 30px; 
+        font-size: 1.25rem; 
+        border-radius: 12px; 
+        text-decoration: none; 
+        transition: all 0.3s ease; 
+    }
+    .secondary-btn:hover { 
+        background-color: var(--primary-color); 
+        color: var(--text-color); 
+        box-shadow: 0 4px 15px rgba(140, 134, 252, 0.4); 
+    }
+    /* End Button Styles */
 
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
     .feature-card { background-color: var(--card-bg); padding: 30px; border-radius: 16px; text-align: center; border: 1px solid #2a2a3f; transition: transform 0.3s ease, box-shadow 0.3s ease; }
     .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px var(--card-shadow-hover); }
-    .feature-card-icon { color: var(--primary-color); margin-bottom: 20px; }
+    .feature-card-icon { 
+        color: var(--primary-color); 
+        margin-bottom: 20px; 
+        font-size: 3rem; /* Font Awesome size */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #1a1a2b; /* Light background for icons */
+        box-shadow: 0 0 15px rgba(140, 134, 252, 0.4); /* Glow effect */
+    }
+
     .feature-card h3 { font-size: 1.4rem; color: var(--text-color); margin-bottom: 10px; }
     .feature-card p { color: var(--text-secondary); font-size: 0.95rem; }
+
+    /* --- Supported Platforms Section --- */
+    .platforms-grid {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+    .platform-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 15px 25px;
+        border-radius: 12px;
+        background-color: var(--card-bg);
+        border: 1px solid #2a2a3f;
+        transition: transform 0.2s;
+    }
+    .platform-item:hover {
+        transform: scale(1.05);
+    }
+    .platform-logo {
+        font-size: 3.5rem;
+        margin-bottom: 10px;
+    }
+    .platform-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    /* Specific Platform Colors */
+    .platform-tiktok { color: #fe2c55; }
+    .platform-instagram { color: #E1306C; } /* Instagram */
+    .platform-twitter { color: #1DA1F2; } /* Twitter Blue */
+    .platform-soon { color: #6d67e6; } /* Primary Color */
+    /* ----------------------------------- */
+
 
     .how-it-works-step { display: flex; align-items: center; gap: 40px; margin-bottom: 60px; flex-direction: column; }
     .step-text { text-align: center; max-width: 600px; }
     .step-text .step-number { display: inline-block; background-color: var(--primary-color); color: white; width: 35px; height: 35px; border-radius: 50%; line-height: 35px; text-align: center; font-weight: 700; font-size: 1.1rem; margin-bottom: 15px; }
     .step-text h3 { font-size: 1.8rem; text-align: center; margin-bottom: 10px; }
-    .step-text code { background-color: var(--background-light); color: var(--text-color); padding: 4px 8px; border-radius: 6px; }
+    .step-text code { background-color: var(--background-light); color: var(--primary-color); padding: 4px 8px; border-radius: 6px; font-weight: 600; }
     .step-image { flex-shrink: 0; }
     .step-image img { width: 100%; max-width: 500px; border-radius: 12px; box-shadow: 0 10px 30px var(--card-shadow); border: 1px solid #33334d; }
     
     .accordion { background-color: var(--card-bg); border-radius: 12px; margin-bottom: 15px; overflow: hidden; border: 1px solid #2a2a3f; }
-    .accordion-header { padding: 18px; background-color: #2a2a3f; color: var(--text-secondary); cursor: pointer; font-weight: 600; }
-    .accordion-content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
-    .accordion-content p { padding: 18px 0; }
-    .accordion.active .accordion-content { max-height: 200px; }
-    
+    .accordion-header { padding: 18px; background-color: #2a2a3f; color: var(--text-color); cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
+    .accordion-header:hover { background-color: #33334d; }
+    .accordion-header i { transition: transform 0.3s; color: var(--primary-color); }
+    .accordion.active .accordion-header i { transform: rotate(180deg); }
+    .accordion-content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; background-color: var(--card-bg); }
+    .accordion-content p { padding: 18px 0; color: var(--text-secondary); }
+    .accordion.active .accordion-content { max-height: 200px; } 
+
     footer { text-align: center; padding: 40px 20px 20px; font-size: 0.9rem; color: #666; margin-top: auto; }
     footer a { color: var(--primary-color); text-decoration: none; }
     
@@ -125,7 +228,7 @@
       <a href="/#downloader">Downloader</a>
       <a href="/#features">Features</a>
       <a href="/#how-to-use">How to Use</a>
-      <a href="/#faq-section">FAQ</a>
+      <a href="#[DESTEK_SUNUCUSU_LINKI]">Support Server</a> <a href="/#faq-section">FAQ</a>
   </aside>
 
   <main class="container">
@@ -135,29 +238,56 @@
         <path d="M216.856 16.597C198.36 8.298 179.215 3.068 159.877 0c-2.07 3.639-4.38 8.385-6.014 12.252-17.48-2.633-34.793-2.633-51.772 0-1.635-3.867-4.065-8.613-6.135-12.252-19.338 3.068-38.483 8.298-56.979 16.597C5.818 58.707-3.884 99.622.785 140.043c22.56 16.597 44.476 26.61 66.148 33.93 5.414-7.525 10.197-15.504 14.34-23.905-7.867-2.987-15.379-6.794-22.319-11.511 1.87-1.398 3.74-2.916 5.609-4.314 42.547 19.339 88.897 19.339 131.324 0 1.87 1.398 3.739 2.916 5.609 4.314-6.94 4.837-14.452 8.524-22.319 11.511 4.143 8.401 8.926 16.38 14.22 23.905 21.672-7.32 43.589-17.333 66.149-33.93 5.115-47.232-8.922-87.58-38.606-123.446l-.001-.001ZM85.207 124.838c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Zm85.586 0c-12.875 0-23.312-11.729-23.312-26.158 0-14.43 10.314-26.159 23.312-26.159 12.998 0 23.435 11.729 23.312 26.159 0 14.429-10.314 26.158-23.312 26.158Z"/>
       </svg>
       <h1>Invite the Tiks Save Bot</h1>
-      <p>The simplest way to download and share TikTok videos directly within your Discord server. No watermarks, no limits, no hassle.</p>
-      <a href="https://discord.com/oauth2/authorize?client_id=1398955028487864390&permissions=51200&integration_type=0&scope=bot+applications.commands" class="invite-btn" target="_blank" rel="noopener noreferrer">
-        Add to Your Server
-      </a>
-    </section>
+      <p>The simplest way to download and share **TikTok, Instagram, and Twitter** videos directly within your Discord server. Enjoy **watermark-free** videos and **MP3** audio instantly.</p>
+      
+      <div class="button-group"> <a href="https://discord.com/oauth2/authorize?client_id=1398955028487864390&permissions=51200&integration_type=0&scope=bot+applications.commands" class="invite-btn" target="_blank" rel="noopener noreferrer">
+            <i class="fab fa-discord" style="font-size: 1.5rem;"></i> Add to Your Server
+          </a>
+          <a href="#[DESTEK_SUNUCUSU_LINKI]" class="secondary-btn" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-headset" style="font-size: 1.5rem;"></i> Destek Sunucusu
+          </a>
+      </div> </section>
 
     <section id="bot-features">
-        <h2 class="section-title">Bot Features</h2>
+        <h2 class="section-title">Core Bot Features</h2>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                <div class="feature-card-icon"><i class="fas fa-magic"></i></div>
                 <h3>Watermark-Free</h3>
-                <p>All videos are delivered clean, without any TikTok logos or watermarks.</p>
+                <p>All videos are delivered clean and ready for sharing, without any distracting TikTok logos or watermarks.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 8-4 4 4 4"/><path d="M16 12H9"/><path d="M20 12h-1"/><path d="M4 6V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1"/></svg></div>
+                <div class="feature-card-icon"><i class="fas fa-video"></i></div>
                 <h3>HD Quality & MP3</h3>
-                <p>Choose to download the video in high quality or just grab the audio as an MP3 file.</p>
+                <p>Download videos in the highest available quality or quickly strip the audio to get an MP3 file.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4h.01"/></svg></div>
+                <div class="feature-card-icon"><i class="fas fa-bolt"></i></div>
                 <h3>Instant & Easy</h3>
-                <p>Use a simple slash command (<code>/tiktok</code>) to get your video in seconds.</p>
+                <p>No waiting. Use the simple slash command <code>/tiktok</code> and receive your download links in mere seconds.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="supported-platforms">
+        <h2 class="section-title">Supported Platforms</h2>
+        <p style="text-align: center; max-width: 700px; margin: -20px auto 40px; color: var(--text-secondary);">Tiks Save, **TikTok, Instagram** ve **Twitter (X)** videolarını filigransız indirmek için tasarlandı. Daha fazla platform yakında geliyor!</p>
+        <div class="platforms-grid">
+            <div class="platform-item">
+                <div class="platform-logo platform-tiktok"><i class="fab fa-tiktok"></i></div>
+                <div class="platform-name">TikTok</div>
+            </div>
+            <div class="platform-item">
+                <div class="platform-logo platform-instagram"><i class="fab fa-instagram"></i></div>
+                <div class="platform-name">Instagram</div>
+            </div>
+            <div class="platform-item">
+                <div class="platform-logo platform-twitter"><i class="fab fa-twitter"></i></div>
+                <div class="platform-name">Twitter (X)</div>
+            </div>
+            <div class="platform-item">
+                <div class="platform-logo platform-soon"><i class="fas fa-link"></i></div>
+                <div class="platform-name">More platforms soon</div>
             </div>
         </div>
     </section>
@@ -168,7 +298,7 @@
             <div class="step-text">
                 <div class="step-number">1</div>
                 <h3>Use the Slash Command</h3>
-                <p>In any text channel, simply type <code>/tiktok</code> and select the command from the list.</p>
+                <p>In any text channel where the bot has permission, simply type <code>/tiktok</code> and select the command from the list.</p>
             </div>
             <div class="step-image">
                 <img src="https://i.imgur.com/vx9INkX.png" alt="Using the slash command in Discord">
@@ -178,7 +308,7 @@
             <div class="step-text">
                 <div class="step-number">2</div>
                 <h3>Paste Your Link</h3>
-                <p>A popup will appear. Paste the TikTok video link into the 'url' field and press Enter.</p>
+                <p>A popup will appear. Paste the **TikTok/Instagram/Twitter** video link into the 'url' field and press **Enter** or click **Send**.</p>
             </div>
              <div class="step-image">
                 <img src="https://i.imgur.com/TjmzfQf.png" alt="Pasting the link into the bot's prompt">
@@ -188,7 +318,7 @@
              <div class="step-text">
                 <div class="step-number">3</div>
                 <h3>Get Your Video</h3>
-                <p>The bot will instantly reply with a high-quality video embed and download buttons.</p>
+                <p>The bot will instantly reply with a high-quality video embed, ready for playback, along with dedicated **Video** and **MP3** download buttons.</p>
             </div>
              <div class="step-image">
                 <img src="https://i.imgur.com/8RbaVD7.png" alt="Bot's reply with download links">
@@ -199,31 +329,34 @@
     <section id="bot-faq">
         <h2 class="section-title">Bot FAQ</h2>
         <div class="accordion">
-            <div class="accordion-header">Is the bot free to use?</div>
-            <div class="accordion-content"><p>Yes, the Tiks Save bot is completely free to use in your server with no limitations.</p></div>
+            <div class="accordion-header">Is the bot free to use?<i class="fas fa-chevron-down"></i></div>
+            <div class="accordion-content"><p>Yes, the Tiks Save bot is **completely free** to use in your server with no usage limitations or hidden fees.</p></div>
         </div>
         <div class="accordion">
-            <div class="accordion-header">What permissions does it need?</div>
-            <div class="accordion-content"><p>The bot only requires basic permissions to read messages, send messages, and embed links in the channels where you use its commands.</p></div>
+            <div class="accordion-header">What permissions does it need?<i class="fas fa-chevron-down"></i></div>
+            <div class="accordion-content"><p>The bot only requires basic permissions to **Read Messages**, **Send Messages**, and **Embed Links** in the channels where you intend to use its commands. It does not require administrative access.</p></div>
         </div>
          <div class="accordion">
-            <div class="accordion-header">Does the bot store any data?</div>
-            <div class="accordion-content"><p>No. We respect your privacy. The bot does not log or store any information about the links you download or the users who request them.</p></div>
+            <div class="accordion-header">Does the bot store any data?<i class="fas fa-chevron-down"></i></div>
+            <div class="accordion-content"><p>No. We respect your privacy. The bot **does not log or store** any information about the links you download, the content of the videos, or the users who request them.</p></div>
         </div>
     </section>
     
     <section class="hero-section" style="margin-bottom: 40px;">
         <h2>Ready to Get Started?</h2>
-        <p style="font-size: 1.1rem">Add the Tiks Save bot to your server today and start downloading!</p>
-         <a href="https://discord.com/oauth2/authorize?client_id=1398955028487864390&permissions=51200&integration_type=0&scope=bot+applications.commands" class="invite-btn" target="_blank" rel="noopener noreferrer">
-            Add to Your Server
-        </a>
-    </section>
+        <p style="font-size: 1.1rem">Don't waste time with other bots. Add the most reliable multi-platform video downloader to your server today!</p>
+        
+        <div class="button-group"> <a href="https://discord.com/oauth2/authorize?client_id=1398955028487864390&permissions=51200&integration_type=0&scope=bot+applications.commands" class="invite-btn" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-discord" style="font-size: 1.5rem;"></i> Add to Your Server
+            </a>
+            <a href="#https://discord.gg/KyH3EEkswz" class="secondary-btn" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-headset" style="font-size: 1.5rem;"></i> Destek Sunucusu
+            </a>
+        </div> </section>
   </main>
 
   <footer class="container">
-    <p>&copy; 2025 Tiks Save. All rights reserved. | <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a></p>
-  </footer>
+    <p>&copy; 2025 Tiks Save. All rights reserved. | <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a> | <a href="#[DESTEK_SUNUCUSU_LINKI]">Support Server</a></p> </footer>
 
   <script>
       // Accordion Script
@@ -231,7 +364,25 @@
       accordionHeaders.forEach(header => {
           header.addEventListener('click', () => {
               const accordion = header.parentElement;
+              const content = header.nextElementSibling;
+              
+              const isActive = accordion.classList.contains('active');
+
+              // Collapse all others
+              document.querySelectorAll('.accordion.active').forEach(item => {
+                    if (item !== accordion) {
+                        item.classList.remove('active');
+                        item.querySelector('.accordion-content').style.maxHeight = '0';
+                    }
+                });
+
+              // Toggle current
               accordion.classList.toggle('active');
+              if (!isActive) {
+                  content.style.maxHeight = content.scrollHeight + 'px';
+              } else {
+                  content.style.maxHeight = '0';
+              }
           });
       });
 
