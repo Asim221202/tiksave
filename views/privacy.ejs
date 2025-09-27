@@ -3,46 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Privacy Policy - Tikssave</title>
+  <title>Privacy Policy - Tiks Save</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
   <style>
+    /* Ana sayfadan alınan CSS değişkenleri */
+    :root {
+        --primary-color: #8c86fc;
+        --secondary-color: #5865F2;
+        --background-dark: #12121e;
+        --background-light: #1a1a2b;
+        --text-color: #f0f6ff;
+        --text-secondary: #c9d6ef;
+        --card-bg: #1f1f33;
+    }
+    
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #222;
-      color: #e0e0e0;
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--background-dark);
+      color: var(--text-color);
       margin: 0;
       padding: 20px;
       line-height: 1.7;
     }
     .container {
-      max-width: 850px;
+      max-width: 900px;
       margin: auto;
+      padding-bottom: 60px;
     }
     h1 {
-      color: #3b82f6;
-      font-size: 2.5rem;
       text-align: center;
+      font-size: 2.6rem;
+      color: var(--primary-color); /* Ana renk */
+      font-weight: 800;
       margin-bottom: 30px;
     }
     h2 {
-      color: #60a5fa;
-      margin-top: 40px;
       font-size: 1.5rem;
+      color: var(--text-color); /* Metin rengi, h1'den daha az vurgulu */
+      margin-top: 40px;
+      border-left: 5px solid var(--primary-color); /* Ana sayfa öğelerine benzer bir vurgu */
+      padding-left: 15px;
+      margin-bottom: 20px;
+      font-weight: 700;
     }
     p {
       margin-top: 15px;
+      color: var(--text-secondary); /* Okunabilirliği artırmak için ikincil metin rengi */
     }
-    footer {
-      margin: 50px auto 20px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #777;
+    ul {
+      padding-left: 20px;
+      margin-top: 15px;
+      list-style: disc;
+    }
+    li {
+      margin-bottom: 10px;
+      color: var(--text-secondary);
     }
     a {
-      color: #3b82f6;
+      color: var(--primary-color);
       text-decoration: none;
+      transition: color 0.2s ease;
     }
     a:hover {
       text-decoration: underline;
+    }
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666; /* Daha koyu footer metni */
+    }
+
+    @media (max-width: 600px) {
+        h1 {
+            font-size: 2rem;
+        }
+        h2 {
+            font-size: 1.3rem;
+        }
     }
   </style>
 </head>
@@ -50,8 +92,8 @@
   <div class="container">
     <h1>Privacy Policy</h1>
 
-    <p><strong>Effective Date:</strong> July 28, 2025</p>
-    <p>This Privacy Policy explains how Tikssave.com handles your data. We are committed to protecting your privacy and maintaining transparency.</p>
+    <p><strong>Effective Date:</strong> September 27, 2025</p>
+    <p>This Privacy Policy explains how Tikssave.xyz handles your data. We are committed to protecting your privacy and maintaining transparency.</p>
 
     <h2>1. What We Collect</h2>
     <p>We do not store or track any personal data such as names, emails, or IP addresses. The URLs you submit are processed temporarily and not saved on our servers.</p>
@@ -60,7 +102,7 @@
     <p>We may use cookies for essential site functions and basic analytics (e.g., page views). These are anonymous and used only to improve the user experience.</p>
 
     <h2>3. Third-Party APIs</h2>
-    <p>Tikssave.com uses third-party APIs to retrieve TikTok content. We are not responsible for data collected by these external services. Refer to TikTok’s and the API provider’s privacy policies for more details.</p>
+    <p>Tikssave.xyz uses third-party APIs to retrieve TikTok content. We are not responsible for data collected by these external services. Refer to TikTok’s and the API provider’s privacy policies for more details.</p>
 
     <h2>4. Security</h2>
     <p>We take reasonable steps to protect the site against unauthorized access and misuse, but we cannot guarantee 100% security over the internet.</p>
@@ -69,10 +111,10 @@
     <p>We may update this policy from time to time. Any changes will be reflected on this page, and your continued use of the site indicates acceptance.</p>
 
     <h2>6. Contact</h2>
-    <p>For any questions or privacy concerns, please contact us at <a href="mailto:support@tikssave.com">support@tikssave.com</a>.</p>
+    <p>For any questions or privacy concerns, please contact us at <a href="mailto:tiksave@gmail.com">tiksave@gmail.com</a>.</p>
 
     <footer>
-      &copy; 2025 Tikssave.com — All rights reserved. |
+      &copy; 2025 Tikssave.xyz — All rights reserved. |
       <a href="/privacy">Privacy Policy</a> |
       <a href="/terms">Terms of Service</a>
     </footer>
