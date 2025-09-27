@@ -685,11 +685,12 @@
         </form>
     </div>
     
-    <div id="message-container">
-        <% if (message) { %>
+      <div id="message-container">
+        <% if (typeof message !== 'undefined' && message) { %>
             <p><%= message %></p>
         <% } %>
     </div>
+
     
     <% if (videoData) { %>
         <div id="preview-container" class="show" style="display: flex;">
