@@ -136,13 +136,26 @@ app.post('/api/tiktok-process', async (req, res) => {
         const videoInfo = await fetchTikTokVideoFromProxy(url);
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
+        
+        // TikTok verisi doğrudan videoInfo alanına kaydediliyor (media dizisi yerine)
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
 
         // YENİ: Veriyi Redis'e kaydet
         await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); // 7 günlük TTL
 
-        res.json({ success: true, shortId, videoInfo });
+        // Client-side'a TikTok'a özgü veriyi gönder
+        res.json({ 
+            success: true, 
+            shortId,
+            desc: videoInfo.desc,
+            cover: videoInfo.cover,
+            play: videoInfo.play,
+            hdplay: videoInfo.hdplay,
+            music: videoInfo.music,
+            username: videoInfo.author?.unique_id || 'tiktok'
+        });
+        
     } catch (err) {
         res.status(500).json({ success: false, message: 'Tüm proxyler başarısız oldu veya limit aşıldı.' });
     }
@@ -156,10 +169,13 @@ app.post('/api/instagram-process', async (req, res) => {
         let shortId;
         do { shortId = nanoid(); } while (await VideoLink.findOne({ shortId }));
         
+        // Bu rotada video bilgisi çekilmiyor, client'ın kendi JS'i kullanılıyor gibi görünüyor.
+        // Download'un çalışması için bu rotanın tam olarak ne döndürmesi gerektiğini kontrol edin.
+        // Eğer client side'da `/api/get-media` kullanılıyorsa, bu rota atlanıyor olabilir.
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo: { type: 'instagram' } });
         await newVideoLink.save();
         
-        res.json({ success: true, shortId });
+        res.json({ success: true, shortId, message: "Instagram verisi henüz bu rotadan çekilmiyor, lütfen client-side script'i kontrol edin." });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Instagram işlemi başarısız oldu.' });
     }
@@ -197,40 +213,98 @@ app.get('/api/info/:shortId', async (req, res) => {
     }
 });
 
-// Proxy download
+// GÜNCELLENMİŞ PROXY DOWNLOAD ROTA
 app.get('/proxy-download', async (req, res) => {
-    const { shortId, type, username, mediaIndex = 0 } = req.query;
-    try {
-        const videoLink = await VideoLink.findOne({ shortId });
-        if (!videoLink || !videoLink.videoInfo) return res.status(404).send('Video bulunamadı');
+    // shortId: TikTok için kullanılır (DB'den URL çeker)
+    // url: Instagram/Twitter gibi platformlar için client-side'dan direkt gönderilen URL
+    const { shortId, type, username, url: directUrl, mediaIndex = 0 } = req.query; 
 
-        const mediaInfo = Array.isArray(videoLink.videoInfo.media) ? videoLink.videoInfo.media[mediaIndex] : videoLink.videoInfo;
-        
+    try {
+        let videoInfo;
         let videoUrl;
-        if (type === 'video') {
-            videoUrl = mediaInfo.media_url || mediaInfo.play || mediaInfo.hdplay;
-            if (!videoUrl || !videoUrl.endsWith('.mp4')) {
-                videoUrl = mediaInfo.hdplay || mediaInfo.play || mediaInfo.media_url;
+        let originalUrl = directUrl; // Default olarak directUrl'ı kullan
+
+        if (shortId) {
+            // Case 1: TikTok (shortId ile)
+            const videoLink = await VideoLink.findOne({ shortId });
+            if (!videoLink) return res.status(404).send('Video verisi bulunamadı (shortId).');
+
+            videoInfo = videoLink.videoInfo;
+            originalUrl = videoLink.originalUrl;
+            
+            // İstenen türe göre doğru URL'yi seç
+            if (type === 'hdplay') {
+                videoUrl = videoInfo.hdplay;
+            } else if (type === 'play') {
+                videoUrl = videoInfo.play;
+            } else if (type === 'music') {
+                videoUrl = videoInfo.music;
+            } else if (type === 'video' && (videoInfo.hdplay || videoInfo.play)) {
+                // Yedek durum, sadece 'video' tipi gelirse
+                videoUrl = videoInfo.hdplay || videoInfo.play;
             }
+            
+        } else if (directUrl) {
+            // Case 2: Diğer platformlar (direkt URL ile)
+            videoUrl = directUrl;
+            
         } else {
-            videoUrl = mediaInfo.media_url || mediaInfo.cover;
+            return res.status(400).send('İndirme bilgisi eksik (shortId veya url).');
         }
 
-        if (!videoUrl) return res.status(404).send('Video link bulunamadı');
+        if (!videoUrl) return res.status(404).send('İstenen tür için indirme linki bulunamadı.');
 
-        const extension = type === 'video' ? 'mp4' : 'jpg';
-        const safeUsername = sanitize((username || 'unknown').replace(/[\s\W]+/g, '_')).substring(0, 30);
+        // Dosya uzantısını ve MIME tipini belirle
+        let extension = 'mp4';
+        let contentType = 'video/mp4';
+        
+        if (type === 'music') {
+            extension = 'mp3';
+            contentType = 'audio/mpeg';
+        } else if (type === 'image') {
+            extension = 'jpg';
+            contentType = 'image/jpeg';
+        } else if (videoUrl.includes('.jpg') || videoUrl.includes('.jpeg')) {
+            extension = 'jpg';
+            contentType = 'image/jpeg';
+        } else if (videoUrl.includes('.gif')) {
+            extension = 'gif';
+            contentType = 'image/gif';
+        } else if (videoUrl.includes('.mp3')) {
+            extension = 'mp3';
+            contentType = 'audio/mpeg';
+        }
+
+
+        // --- Dosya Adlandırma & Streaming ---
+        const safeUsername = sanitize((username || 'tikssave').replace(/[\s\W]+/g, '_')).substring(0, 30);
         const filename = `tikssave_${safeUsername}_${Date.now()}.${extension}`;
 
-        const videoRes = await axios.get(videoUrl, { responseType: 'stream', headers: { 'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0' } });
+        const videoRes = await axios.get(videoUrl, { 
+            responseType: 'stream', 
+            // Bazı medya sunucularının User-Agent ve Referer kontrolü yapması nedeniyle sahte başlıklar gönderilir
+            headers: { 
+                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+                'Referer': originalUrl || 'https://www.tiktok.com/'
+            },
+            timeout: 15000 // 15 saniye timeout
+        });
+        
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Type', contentType);
+        // İsteğe bağlı: İçerik uzunluğunu ileterek indirme ilerlemesini sağlar
+        if (videoRes.headers['content-length']) {
+            res.setHeader('Content-Length', videoRes.headers['content-length']);
+        }
+        
         videoRes.data.pipe(res);
 
     } catch (err) {
-        res.status(500).send('Download error');
+        console.error('Proxy download error:', err.message);
+        res.status(500).send('Download error: Failed to stream the file.');
     }
 });
+
 
 // ShortId yönlendirme - GÜNCELLENMİŞ ROTA
 app.get('/:shortId', async (req, res) => {
