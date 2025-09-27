@@ -9,13 +9,28 @@
   <title>Dashboard - Tikssave.com</title>
   <meta name="description" content="Manage your Discord Bot settings and add it to your servers via Tikssave.com dashboard."/>
   
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
   <style>
+    /* CSS Variables from index.ejs */
+    :root {
+        --primary-color: #8c86fc; /* Bright Purple/Indigo */
+        --secondary-color: #5865F2; /* Discord Blue */
+        --background-dark: #12121e; /* Deep Dark Background */
+        --background-light: #1a1a2b; /* Navbar/Menu Background */
+        --text-color: #f0f6ff;
+        --text-secondary: #c9d6ef;
+        --card-bg: #1f1f33; /* Card/Section Background */
+    }
+
     /* RESET VE TEMEL AYARLAR */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #181a1f;
-      color: #ddd;
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--background-dark);
+      color: var(--text-secondary);
       padding-top: 80px;
       display: flex;
       flex-direction: column;
@@ -31,7 +46,7 @@
         top: 0;
         left: 0;
         width: 100%;
-        background-color: #2a2e3b;
+        background-color: var(--background-light); /* Uyumlu arka plan */
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         display: flex;
         justify-content: space-between;
@@ -55,7 +70,7 @@
     .navbar .logo-container .logo-text {
         font-size: 1.4rem;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-color);
         letter-spacing: 0.5px;
     }
     .navbar .menu-toggle {
@@ -70,7 +85,7 @@
     }
     .menu-toggle .bar {
         height: 2px;
-        background-color: #ddd;
+        background-color: var(--text-secondary);
         border-radius: 1px;
         transition: transform 0.3s ease, opacity 0.3s ease;
     }
@@ -83,7 +98,7 @@
         right: 0;
         width: 200px;
         height: calc(100vh - 60px);
-        background-color: #2a2e3b;
+        background-color: var(--background-light); /* Uyumlu arka plan */
         transform: translateX(100%);
         transition: transform 0.3s ease-in-out;
         box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
@@ -94,14 +109,17 @@
     }
     .menu-panel.open { transform: translateX(0); }
     .menu-panel a {
-        color: #ddd;
+        color: var(--text-secondary);
         text-decoration: none;
         font-size: 1rem;
         padding: 12px 10px;
-        border-bottom: 1px solid #2c2f36;
+        border-bottom: 1px solid var(--card-bg); /* Uyumlu çizgi */
         transition: background-color 0.2s ease;
     }
-    .menu-panel a:hover { background-color: #2c2f36; color: #4f8ef7; }
+    .menu-panel a:hover { 
+        background-color: var(--card-bg); 
+        color: var(--primary-color); /* Ana renk vurgusu */
+    }
     .main-content {
       width: 100%;
       max-width: 800px;
@@ -112,13 +130,13 @@
       font-size: 2.8rem;
       margin-bottom: 20px;
       text-align: center;
-      color: #4f8ef7;
+      color: var(--primary-color); /* Ana renk */
       font-weight: 900;
       user-select: none;
-      text-shadow: 0 2px 6px rgba(79,142,247,0.6);
+      text-shadow: 0 0 10px rgba(140, 134, 252, 0.5); /* Yeni renk tonunda gölge */
     }
     .dashboard-section {
-      background-color: #2a2e3b;
+      background-color: var(--card-bg); /* Uyumlu kart arka planı */
       border-radius: 18px;
       padding: 30px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -138,14 +156,14 @@
       font-weight: 700;
       text-decoration: none;
       color: white;
-      background-color: #5865F2;
+      background-color: var(--secondary-color); /* Discord Mavi */
       box-shadow: 0 6px 12px rgba(88, 101, 242, 0.6);
       transition: all 0.3s ease;
       cursor: pointer;
     }
     .discord-login-btn:hover {
       background-color: #4752C4;
-      box-shadow: 0 8px 18px rgba(71, 82, 196, 0.8);
+      box-shadow: 0 8px 18px rgba(88, 101, 242, 0.8);
       transform: translateY(-2px);
     }
     .discord-login-btn:active {
@@ -163,7 +181,7 @@
       margin-top: 30px;
     }
     .server-list-container h2 {
-      color: #fff;
+      color: var(--primary-color); /* Ana renk vurgusu */
       font-size: 1.8rem;
       margin-bottom: 20px;
       text-shadow: 0 1px 3px rgba(0,0,0,0.5);
@@ -175,7 +193,7 @@
       gap: 15px;
     }
     .server-item {
-      background-color: #313743;
+      background-color: var(--background-light); /* Uyumlu öğe arka planı */
       border-radius: 12px;
       padding: 15px;
       display: flex;
@@ -184,7 +202,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       transition: background-color 0.2s ease;
     }
-    .server-item:hover { background-color: #3a3f57; }
+    .server-item:hover { background-color: #2a2e3b; } /* Hafif koyulaşma */
     .server-info {
       display: flex;
       align-items: center;
@@ -194,7 +212,7 @@
       width: 50px;
       height: 50px;
       border-radius: 50%;
-      background-color: #4f8ef7;
+      background-color: var(--primary-color); /* Ana renk (veya Discord mavisi) */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -206,12 +224,12 @@
     .server-name {
       font-size: 1.3rem;
       font-weight: 600;
-      color: #fff;
+      color: var(--text-color);
     }
     .invite-btn {
       padding: 10px 20px;
       border-radius: 8px;
-      background-color: #4f8ef7;
+      background-color: var(--primary-color); /* Ana renk */
       color: white;
       text-decoration: none;
       font-weight: 600;
@@ -220,7 +238,7 @@
       cursor: pointer;
       transition: background-color 0.2s, transform 0.1s;
     }
-    .invite-btn:hover { background-color: #3a6ee8; transform: translateY(-1px); }
+    .invite-btn:hover { background-color: #6d67e6; transform: translateY(-1px); } /* Hafif koyu hover */
     .invite-btn:active { transform: translateY(1px); }
     .error-message {
       color: #ff6b6b;
@@ -236,16 +254,16 @@
       margin: 30px auto 15px;
       user-select: none;
       font-weight: 400;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Poppins', sans-serif; /* Poppins kullanıldı */
     }
     footer a {
-      color: #4f8ef7;
+      color: var(--primary-color); /* Ana renk */
       text-decoration: none;
       font-weight: 600;
       transition: color 0.3s ease;
     }
     footer a:hover {
-      color: #75a7ff;
+      color: #b7b4fe;
       text-decoration: underline;
     }
     @media (max-width: 480px) {
@@ -315,7 +333,7 @@
                       const iconUrl = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : null;
                       const initials = guild.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                     %>
-                    <div class="server-icon" style="<%= iconUrl ? `background-image: url('${iconUrl}'); background-size: cover;` : '' %>">
+                    <div class="server-icon" style="<%= iconUrl ? `background-image: url('${iconUrl}'); background-size: cover; background-color: var(--secondary-color);` : '' %>">
                       <%= iconUrl ? '' : initials %>
                     </div>
                     <span class="server-name"><%= guild.name %></span>
