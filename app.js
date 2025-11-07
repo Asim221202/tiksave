@@ -33,6 +33,8 @@ const TIKTOK_PROXIES = [
     process.env.PROXY2_URL,
     process.env.PROXY3_URL,
     process.env.PROXY4_URL,
+    process.env.PROXY5_URL,
+    process.env.PROXY6_URL,
 ];
 
 // Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
