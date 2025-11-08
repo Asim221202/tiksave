@@ -52,6 +52,7 @@ function shuffleArray(array) {
 }
 
 // --- TikTok Proxy İşlemcisi ---
+// --- TikTok Proxy İşlemcisi (GÜÇLENDİRİLMİŞ: Eksik veriyi atlar) ---
 async function fetchTikTokVideoFromProxy(url) {
     const shuffledProxies = shuffleArray(TIKTOK_PROXIES);
 
@@ -62,16 +63,30 @@ async function fetchTikTokVideoFromProxy(url) {
     for (const proxy of shuffledProxies) {
         try {
             const response = await axios.post(proxy, { url }, { timeout: 10000 }); 
-            if (response.data && response.data.code === 0 && response.data.data) {
+            const videoData = response.data.data;
+            
+            // 1. Temel başarı kontrolü
+            if (response.data && response.data.code === 0 && videoData) {
+                
+                // 2. KRİTİK KONTROL: Verinin içinde indirme linki var mı?
+                if (!videoData.play && !videoData.hdplay) {
+                    console.error(`⚠️ TikTok Proxy (Veri Eksik): ${proxy} - Başarılı yanıt geldi, ancak indirme linki (play/hdplay) eksik. Sonraki proxy deneniyor.`);
+                    // Eksik veri döndüyse bu proxy'yi atla ve bir sonrakine geç
+                    continue; 
+                }
+                
+                // Kontrol başarılı: Veri tam ve indirme linki içeriyor.
                 console.log(`✅ TikTok verisi başarıyla çekildi: ${proxy}`);
-                return response.data.data;
+                return videoData;
             }
         } catch (err) {
             console.error(`❌ TikTok Proxy hatası: ${proxy} - ${err.message}`);
         }
     }
+    // Tüm proxyler denendi ve ya hata verdi ya da eksik veri döndürdü.
     throw new Error("Tüm TikTok proxyleri başarısız oldu veya limit aşıldı");
 }
+
 
 
 // EJS & Middleware
