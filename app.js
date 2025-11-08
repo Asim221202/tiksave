@@ -28,7 +28,6 @@ redis.on('error', (err) => console.error('Redis connection error:', err));
 
 
 // --- PROXY LİSTELERİ VE FİLTRELEME ---
-// Tanımlanmamış ENV değişkenlerini filtreler (proxy: null, undefined)
 const TIKTOK_PROXIES = [
     process.env.PROXY1_URL,
     process.env.PROXY2_URL,
@@ -36,12 +35,12 @@ const TIKTOK_PROXIES = [
     process.env.PROXY4_URL,
     process.env.PROXY5_URL,
     process.env.PROXY6_URL,
-].filter(p => p && p.startsWith('http')); // Sadece geçerli URL'leri tutar
+].filter(p => p && p.startsWith('http'));
 
-// Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
+// Python API'nin URL'si
 const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
-// Yeni: Fisher-Yates shuffle algoritması
+// Fisher-Yates shuffle algoritması
 function shuffleArray(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -51,19 +50,17 @@ function shuffleArray(array) {
     return arr;
 }
 
-// --- TikTok Proxy İşlemcisi (Düzeltilmiş) ---
+// --- TikTok Proxy İşlemcisi ---
 async function fetchTikTokVideoFromProxy(url) {
-    // 1. Proxy listesini karıştır
     const shuffledProxies = shuffleArray(TIKTOK_PROXIES);
 
     if (shuffledProxies.length === 0) {
         throw new Error("Proxy listesi boş veya tüm ENV değişkenleri geçersiz.");
     }
     
-    // 2. Her bir proxy'yi sırayla ve benzersiz olarak dene
     for (const proxy of shuffledProxies) {
         try {
-            const response = await axios.post(proxy, { url }, { timeout: 10000 }); // 10 saniye timeout
+            const response = await axios.post(proxy, { url }, { timeout: 10000 }); 
             if (response.data && response.data.code === 0 && response.data.data) {
                 console.log(`✅ TikTok verisi başarıyla çekildi: ${proxy}`);
                 return response.data.data;
@@ -72,7 +69,6 @@ async function fetchTikTokVideoFromProxy(url) {
             console.error(`❌ TikTok Proxy hatası: ${proxy} - ${err.message}`);
         }
     }
-    // Tüm karıştırılmış proxyler denendi ve başarısız oldu
     throw new Error("Tüm TikTok proxyleri başarısız oldu veya limit aşıldı");
 }
 
@@ -140,7 +136,7 @@ app.get('/dashboard', (req, res) => {
 
 // --- API ROTLARI ---
 
-// TikTok - GÜNCELLENMİŞ ROTA
+// TikTok - GÜNCELLENMİŞ ROTA (TTL: 24 saat)
 app.post('/api/tiktok-process', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, message: 'URL yok' });
@@ -151,12 +147,11 @@ app.post('/api/tiktok-process', async (req, res) => {
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
 
-        // Veriyi Redis'e kaydet
-        await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); // 7 günlük TTL
+        // YENİ TTL: 24 saat (3600 saniye * 24 saat)
+        await redis.setex(`tiktok:${shortId}`, 3600 * 24, JSON.stringify(videoInfo)); 
 
         res.json({ success: true, shortId, videoInfo });
     } catch (err) {
-        // Hata mesajı düzeltildi
         res.status(500).json({ success: false, message: 'Tüm proxyler başarısız oldu veya limit aşıldı.' });
     }
 });
@@ -245,7 +240,7 @@ app.get('/proxy-download', async (req, res) => {
     }
 });
 
-// ShortId yönlendirme - GÜNCELLENMİŞ ROTA
+// ShortId yönlendirme - GÜNCELLENMİŞ ROTA (TTL: 24 saat)
 app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     
@@ -280,8 +275,8 @@ app.get('/:shortId', async (req, res) => {
                 videoData = freshVideoInfo;
                 videoLink.videoInfo = freshVideoInfo;
                 await videoLink.save();
-                // API'den çekilen veriyi Redis'e kaydet
-                await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(freshVideoInfo));
+                // YENİ TTL: API'den çekilen veriyi Redis'e 24 saatlik TTL ile kaydet
+                await redis.setex(`tiktok:${shortId}`, 3600 * 24, JSON.stringify(freshVideoInfo));
             }
         }
         
@@ -310,7 +305,6 @@ app.get('/:shortId', async (req, res) => {
 
     } catch (err) {
         console.error('ShortId route error:', err);
-        // Hata logunda hangi shortId'nin hata verdiğini görmek için log eklendi
         res.status(500).send('Sunucu hatası');
     }
 });
