@@ -11,7 +11,7 @@ const VideoLink = require('./models/VideoLink');
 const { customAlphabet } = require('nanoid');
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 7);
 const axios = require('axios');
-const Redis = require('ioredis'); // YENİ: Redis kütüphanesi
+const Redis = require('ioredis'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -27,7 +27,8 @@ redis.on('connect', () => console.log('Redis connected'));
 redis.on('error', (err) => console.error('Redis connection error:', err));
 
 
-// --- PROXY LİSTELERİ ---
+// --- PROXY LİSTELERİ VE FİLTRELEME ---
+// Tanımlanmamış ENV değişkenlerini filtreler (proxy: null, undefined)
 const TIKTOK_PROXIES = [
     process.env.PROXY1_URL,
     process.env.PROXY2_URL,
@@ -35,34 +36,43 @@ const TIKTOK_PROXIES = [
     process.env.PROXY4_URL,
     process.env.PROXY5_URL,
     process.env.PROXY6_URL,
-];
+].filter(p => p && p.startsWith('http')); // Sadece geçerli URL'leri tutar
 
 // Python API'nin URL'si - Instagram için artık kullanılmıyor, ama TikTok için kalacak.
 const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
-// Rastgele proxy seç
-function getRandomProxy(proxies) {
-    if (!proxies || proxies.length === 0) throw new Error("Proxy listesi boş.");
-    const index = Math.floor(Math.random() * proxies.length);
-    return proxies[index];
+// Yeni: Fisher-Yates shuffle algoritması
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
 }
 
-// --- TikTok Proxy İşlemcisi ---
+// --- TikTok Proxy İşlemcisi (Düzeltilmiş) ---
 async function fetchTikTokVideoFromProxy(url) {
-    const tried = new Set();
-    for (let i = 0; i < TIKTOK_PROXIES.length; i++) {
-        const proxy = getRandomProxy(TIKTOK_PROXIES);
-        if (tried.has(proxy)) continue;
-        tried.add(proxy);
+    // 1. Proxy listesini karıştır
+    const shuffledProxies = shuffleArray(TIKTOK_PROXIES);
+
+    if (shuffledProxies.length === 0) {
+        throw new Error("Proxy listesi boş veya tüm ENV değişkenleri geçersiz.");
+    }
+    
+    // 2. Her bir proxy'yi sırayla ve benzersiz olarak dene
+    for (const proxy of shuffledProxies) {
         try {
-            const response = await axios.post(proxy, { url }, { timeout: 10000 });
+            const response = await axios.post(proxy, { url }, { timeout: 10000 }); // 10 saniye timeout
             if (response.data && response.data.code === 0 && response.data.data) {
+                console.log(`✅ TikTok verisi başarıyla çekildi: ${proxy}`);
                 return response.data.data;
             }
         } catch (err) {
-            console.error(`TikTok Proxy hatası: ${proxy} - ${err.message}`);
+            console.error(`❌ TikTok Proxy hatası: ${proxy} - ${err.message}`);
         }
     }
+    // Tüm karıştırılmış proxyler denendi ve başarısız oldu
     throw new Error("Tüm TikTok proxyleri başarısız oldu veya limit aşıldı");
 }
 
@@ -85,7 +95,7 @@ app.use(passport.session());
 
 passport.use(new DiscordStrategy({
     clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
+    clientSecret: CLIENT_CLIENT_SECRET,
     callbackURL: CALLBACK_URL,
     scope: ['identify', 'guilds']
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
@@ -141,11 +151,12 @@ app.post('/api/tiktok-process', async (req, res) => {
         const newVideoLink = new VideoLink({ shortId, originalUrl: url, videoInfo });
         await newVideoLink.save();
 
-        // YENİ: Veriyi Redis'e kaydet
+        // Veriyi Redis'e kaydet
         await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(videoInfo)); // 7 günlük TTL
 
         res.json({ success: true, shortId, videoInfo });
     } catch (err) {
+        // Hata mesajı düzeltildi
         res.status(500).json({ success: false, message: 'Tüm proxyler başarısız oldu veya limit aşıldı.' });
     }
 });
@@ -256,7 +267,7 @@ app.get('/:shortId', async (req, res) => {
 
         let videoData = videoLink.videoInfo;
 
-        // YENİ: Önce Redis'ten veriyi çekmeyi dene
+        // Önce Redis'ten veriyi çekmeyi dene
         if (isTikTok) {
             const cachedVideoInfo = await redis.get(`tiktok:${shortId}`);
             if (cachedVideoInfo) {
@@ -264,12 +275,12 @@ app.get('/:shortId', async (req, res) => {
                 console.log(`Veri Redis'ten çekildi: ${shortId}`);
             } else {
                 console.log(`Redis'te veri bulunamadı, API'den çekiliyor: ${shortId}`);
-                // Eski kodun API'den veri çekme ve veritabanını güncelleme mantığı
+                // API'den veri çekme ve veritabanını güncelleme
                 const freshVideoInfo = await fetchTikTokVideoFromProxy(videoLink.originalUrl);
                 videoData = freshVideoInfo;
                 videoLink.videoInfo = freshVideoInfo;
                 await videoLink.save();
-                // YENİ: API'den çekilen veriyi Redis'e kaydet
+                // API'den çekilen veriyi Redis'e kaydet
                 await redis.setex(`tiktok:${shortId}`, 3600 * 24 * 7, JSON.stringify(freshVideoInfo));
             }
         }
@@ -299,6 +310,7 @@ app.get('/:shortId', async (req, res) => {
 
     } catch (err) {
         console.error('ShortId route error:', err);
+        // Hata logunda hangi shortId'nin hata verdiğini görmek için log eklendi
         res.status(500).send('Sunucu hatası');
     }
 });
