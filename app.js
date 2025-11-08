@@ -35,6 +35,7 @@ const TIKTOK_PROXIES = [
     process.env.PROXY4_URL,
     process.env.PROXY5_URL,
     process.env.PROXY6_URL,
+    process.env.PROXY7_URL,
 ].filter(p => p && p.startsWith('http'));
 
 // Python API'nin URL'si
