@@ -164,7 +164,7 @@ app.post('/api/tiktok-process', async (req, res) => {
         await newVideoLink.save();
 
         // YENİ TTL: 24 saat (3600 saniye * 24 saat)
-        await redis.setex(`tiktok:${shortId}`, 3600 * 24, JSON.stringify(videoInfo)); 
+        await redis.setex(`tiktok:${shortId}`, 3600 * 6, JSON.stringify(videoInfo)); 
 
         res.json({ success: true, shortId, videoInfo });
     } catch (err) {
